@@ -4,22 +4,32 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
+     * Table: certificates
+     * ERD: id (PK), enrollment_id (FK), student_id (FK), course_id (FK),
+     *      certificate_number (unique), certificate_url,
+     *      issued_at, issued_by (enum), certification_status (enum)
      */
     public function up(): void
     {
         Schema::create('certificates', function (Blueprint $table) {
-        $table->id();
+            $table->id();
 
-        $table->foreignId('enrollment_id')->unique()->constrained()->cascadeOnDelete();
+            $table->foreignId('enrollment_id')->unique()->constrained('enrollments')->cascadeOnDelete();
+            $table->foreignId('student_id')->constrained('students')->cascadeOnDelete();
+            $table->foreignId('course_id')->constrained('classes')->cascadeOnDelete();
 
-        $table->timestamp('issued_at')->nullable();
+            $table->string('certificate_number')->unique()->nullable();      // nomor sertifikat unik
+            $table->string('certificate_url')->nullable();                   // link/path file sertifikat PDF
 
-        $table->timestamps();
-    });
+            $table->timestamp('issued_at')->nullable();
+            $table->enum('issued_by', ['admin', 'system'])->default('system');
+            $table->enum('certification_status', ['pending', 'issued', 'revoked'])->default('pending');
+
+            $table->timestamps();
+        });
     }
 
     /**
