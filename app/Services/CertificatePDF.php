@@ -1,19 +1,13 @@
 <?php
 
 namespace App\Services;
-
-// Load FPDF dari folder lokal di root project
+    
 require_once base_path('fpdf/fpdf.php');
 
-/**
- * CertificatePDF
- *
- * Extends FPDF untuk generate sertifikat dengan template gambar.
- * Digunakan langsung oleh CertificateController via buildPDF().
- */
+
 class CertificatePDF extends \FPDF
 {
-    /** Path ke file template sertifikat (PNG/JPG A4 landscape) */
+    
     protected string $templatePath;
 
     public function __construct(string $orientation = 'L', string $unit = 'mm', string $size = 'A4')

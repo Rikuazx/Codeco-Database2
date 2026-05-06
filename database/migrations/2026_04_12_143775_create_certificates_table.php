@@ -5,13 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
-    /**
-     * Run the migrations.
-     * Table: certificates
-     * ERD: id (PK), enrollment_id (FK), student_id (FK), course_id (FK),
-     *      certificate_number (unique), certificate_url,
-     *      issued_at, issued_by (enum), certification_status (enum)
-     */
+
     public function up(): void
     {
         Schema::create('certificates', function (Blueprint $table) {
