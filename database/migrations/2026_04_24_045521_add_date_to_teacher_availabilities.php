@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-      Schema::table('teacher_availabilities', function (Blueprint $table) {
-    $table->date('date')->after('teacher_id');
-    });
+        if (!Schema::hasColumn('teacher_availabilities', 'date')) {
+            Schema::table('teacher_availabilities', function (Blueprint $table) {
+                $table->date('date')->after('teacher_id');
+            });
+        }
     }
 
     /**
@@ -21,8 +23,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('teacher_availabilities', function (Blueprint $table) {
-            //
-        });
+        if (Schema::hasColumn('teacher_availabilities', 'date')) {
+            Schema::table('teacher_availabilities', function (Blueprint $table) {
+                $table->dropColumn('date');
+            });
+        }
     }
 };
