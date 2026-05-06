@@ -1,13 +1,13 @@
 <?php
 
 namespace App\Services;
-    
+
 require_once base_path('fpdf/fpdf.php');
 
 
 class CertificatePDF extends \FPDF
 {
-    
+
     protected string $templatePath;
 
     public function __construct(string $orientation = 'L', string $unit = 'mm', string $size = 'A4')
@@ -15,6 +15,30 @@ class CertificatePDF extends \FPDF
         parent::__construct($orientation, $unit, $size);
         $this->templatePath = base_path('templateSertifikat.png');
         $this->SetMargins(0, 0, 0);
+        $this->AddFont(
+            'FredokaOne-Regular',
+            '',
+            'FredokaOne-Regular.php',
+            storage_path('fonts/')
+        );
+        $this->AddFont(
+            'Montserrat-Bold',
+            '',
+            'Montserrat-Bold.php',
+            storage_path('fonts/')
+        );
+        $this->AddFont(
+            'Montserrat-Medium',
+            '',
+            'Montserrat-Medium.php',
+            storage_path('fonts/')
+        );
+        $this->AddFont(
+            'Montserrat-Regular',
+            '',
+            'Montserrat-Regular.php',
+            storage_path('fonts/')
+        );
         $this->AddFont(
             'GreatVibes',
             '',
@@ -46,34 +70,34 @@ class CertificatePDF extends \FPDF
         string $description = '',
     ): void {
         // ── Nama Peserta ─────────────────────────────────────────────────────
-        $this->SetFont('GreatVibes', '', 40);
+        $this->SetFont('FredokaOne-Regular', '', 40);
         $this->SetTextColor(79, 170, 188); // dark navy
         $this->SetXY(30, 85);
         $this->Cell(237, 18, $this->enc($studentName), 0, 0, 'C');
 
         // ── Nama Kursus ──────────────────────────────────────────────────────
-        $this->SetFont('Arial', 'B', 20);
+        $this->SetFont('Montserrat-Bold', '', 20);
         $this->SetTextColor(79, 170, 188);
         $this->SetXY(30, 118);
         $this->Cell(237, 8, $this->enc($courseName), 0, 0, 'C');
 
         // ── Deskripsi (opsional) ─────────────────────────────────────────────
         if ($description !== '') {
-            $this->SetFont('Arial', '', 12);
+            $this->SetFont('Montserrat-Medium', '', 12);
             $this->SetTextColor(100, 100, 100);
             $this->SetXY(40, 128);
             $this->MultiCell(217, 6, $this->enc($description), 0, 'C');
         }
 
         // ── Tanggal ───────────────────────────────────────────────────────────
-        $this->SetFont('Arial', '', 10);
+        $this->SetFont('Montserrat-Medium', '', 10);
         $this->SetTextColor(80, 80, 80);
         $this->SetXY(47, 158);
         $this->Cell(80, 6, $this->enc($issuedDate), 0, 0, 'C');
 
 
         // ── Penandatangan Kanan ───────────────────────────────────────────────
-        $this->SetFont('Arial', 'B', 10);
+        $this->SetFont('Montserrat-Bold', '', 10);
         $this->SetXY(171, 167);
         $this->Cell(80, 6, $this->enc($signerRight), 0, 0, 'C');
 
