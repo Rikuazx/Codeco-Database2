@@ -22,6 +22,8 @@ return new class extends Migration
         $table->enum('status', ['scheduled', 'ongoing', 'completed'])
         ->default('scheduled');
         $table->timestamps();
+
+        $table->foreignId('recommended_teacher_id')->nullable()->constrained('teachers')->nullOnDelete();
     });
     }
 
