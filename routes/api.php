@@ -11,6 +11,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\ClassController;
 use App\Http\Controllers\TeacherController;
+use App\Http\Controllers\CertificateController;
 
 Route::post('/enroll', [EnrollmentController::class, 'store']);
 Route::post('/attendance', [AttendanceController::class, 'markAttendance']);
