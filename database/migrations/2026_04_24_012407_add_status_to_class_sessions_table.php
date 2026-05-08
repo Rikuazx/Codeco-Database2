@@ -11,11 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('teacher_availabilities', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
-             $table->dropColumn(['period_start', 'period_end']);
-             $table->date('date')->after('teacher_id');
+        Schema::table('class_sessions', function (Blueprint $table) {
+            //
         });
     }
 
@@ -24,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('teacher_availabilities');
+        Schema::table('class_sessions', function (Blueprint $table) {
+            //
+        });
     }
 };
