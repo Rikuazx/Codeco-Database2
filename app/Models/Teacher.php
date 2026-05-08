@@ -7,7 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 class Teacher extends Model
 {
     protected $fillable = [
-        'user_id'
+        'user_id',
+        'specialization'
     ];
 
     // 🔗 Relationships
