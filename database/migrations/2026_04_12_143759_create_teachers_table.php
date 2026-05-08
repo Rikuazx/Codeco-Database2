@@ -15,7 +15,7 @@ return new class extends Migration
     $table->id();
     $table->foreignId('user_id')->constrained()->cascadeOnDelete();
     $table->integer('priority_score')->default(100);
-    $table->string('specialization')->nullable()->change();
+    $table->string('specialization')->nullable();
 
     $table->timestamps();
 });
