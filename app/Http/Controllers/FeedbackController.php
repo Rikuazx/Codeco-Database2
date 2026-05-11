@@ -45,12 +45,16 @@ class feedbackController extends Controller
         'comment' => $request->comment,
         'submitted_at' => now(),
     ]);
-
-    dd($feedback);
     
     return response()->json([
         'message' => 'Feedback submitted',
         'data' => $feedback
     ]);
+}
+
+public function index()
+{
+    $feedback = feedback::all();
+    return response()->json($feedback);
 }
 }
