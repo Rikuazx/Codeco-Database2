@@ -15,8 +15,8 @@ return new class extends Migration {
             $table->foreignId('student_id')->constrained('students')->cascadeOnDelete();
             $table->foreignId('course_id')->constrained('classes')->cascadeOnDelete();
 
-            $table->string('certificate_number')->unique()->nullable();      // nomor sertifikat unik
-            $table->string('certificate_url')->nullable();                   // link/path file sertifikat PDF
+            $table->string('certificate_number')->unique()->nullable();     
+            $table->string('certificate_url')->nullable();                   
 
             $table->timestamp('issued_at')->nullable();
             $table->enum('issued_by', ['admin', 'system'])->default('system');
