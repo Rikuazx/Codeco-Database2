@@ -12,6 +12,9 @@ class CertificatePDF extends \FPDF
 
     public function __construct(string $orientation = 'L', string $unit = 'mm', string $size = 'A4')
     {
+        ini_set('memory_limit', '512M');
+        ini_set('max_execution_time', '120');
+
         parent::__construct($orientation, $unit, $size);
         $this->templatePath = base_path('templateSertifikat.png');
         $this->SetMargins(0, 0, 0);
@@ -78,7 +81,7 @@ class CertificatePDF extends \FPDF
         // ── Nama Kursus ──────────────────────────────────────────────────────
         $this->SetFont('Montserrat-Bold', '', 20);
         $this->SetTextColor(79, 170, 188);
-        $this->SetXY(30, 118);
+        $this->SetXY(30, 116);
         $this->Cell(237, 8, $this->enc($courseName), 0, 0, 'C');
 
         // ── Deskripsi (opsional) ─────────────────────────────────────────────
@@ -92,7 +95,7 @@ class CertificatePDF extends \FPDF
         // ── Tanggal ───────────────────────────────────────────────────────────
         $this->SetFont('Montserrat-Medium', '', 10);
         $this->SetTextColor(80, 80, 80);
-        $this->SetXY(47, 158);
+        $this->SetXY(48, 158);
         $this->Cell(80, 6, $this->enc($issuedDate), 0, 0, 'C');
 
 

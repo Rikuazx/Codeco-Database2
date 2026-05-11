@@ -46,8 +46,12 @@ class CertificateController extends Controller
         $year = now()->year;
 
         $certNumber = Certificate::generateNumber($courseCode, $year);
-        $fileName = 'cert_' . $enrollment->id . '_' . time() . '.pdf';
-        $filePath = 'certificates/' . $fileName;
+
+        // Nama file: cert_{nama_student}_{kode_kursus}_{tahun}.pdf
+        // Contoh: cert_Budi-Santoso_PYTH_2026.pdf
+        $studentSlug = Str::slug($student->user->name);
+        $fileName    = 'cert_' . $studentSlug . '_' . $courseCode . '_' . $year . '_' . $enrollment->id . '.pdf';
+        $filePath    = 'certificates/' . $fileName;
 
         // Generate PDF
         $pdf = $this->buildPDF(
@@ -56,7 +60,6 @@ class CertificateController extends Controller
             certNumber: $certNumber,
             issuedDate: now()->format('d F Y'),
             signerRight: $request->signer_right ?? 'Mr. Ilham',
-            description: $course->description ?? '',
         );
 
         // Simpan ke storage/app/public/certificates/
@@ -74,7 +77,7 @@ class CertificateController extends Controller
             'certificate_number' => $certNumber,
             'certificate_url' => asset('storage/' . $filePath),
             'issued_at' => now(),
-            'issued_by' => auth()->user()?->id ?? 'system',
+            'issued_by' => auth()->user()->id ?? 'system',
             'certification_status' => 'issued',
         ]);
 
@@ -88,11 +91,6 @@ class CertificateController extends Controller
 
     public function test(Request $request)
     {
-        $description = $request->query(
-            'description',
-            "You've demonstrated dedication, learned new skills,\nand taken an important step in your learning journey."
-        );
-        $description = str_replace(["\r\n", "\r"], "\n", $description);
 
         $pdf = $this->buildPDF(
             studentName: $request->query('name', 'Guruh Putra Mahendra'),
@@ -100,7 +98,6 @@ class CertificateController extends Controller
             certNumber: $request->query('cert_number', 'CERT-TEST-001'),
             issuedDate: $request->query('issued_date', now()->format('d F Y')),
             signerRight: $request->query('signer_right', 'Mr. Ilham'),
-            description: $description,
         );
 
         return response($pdf->Output('S'), 200, [
@@ -126,7 +123,6 @@ class CertificateController extends Controller
             certNumber: $certificate->certificate_number,
             issuedDate: $certificate->issued_at?->format('d F Y') ?? now()->format('d F Y'),
             signerRight: 'Mr. Ilham',
-            description: $course->description ?? '',
         );
 
         // Stream PDF ke browser
@@ -170,7 +166,6 @@ class CertificateController extends Controller
         string $certNumber,
         string $issuedDate,
         string $signerRight = '',
-        string $description = '',
     ): CertificatePDF {
         $pdf = new CertificatePDF('L', 'mm', 'A4');   // Landscape A4
         $pdf->SetAutoPageBreak(false);
@@ -183,7 +178,6 @@ class CertificateController extends Controller
             certNumber: $certNumber,
             issuedDate: $issuedDate,
             signerRight: $signerRight,
-            description: $description,
         );
 
         return $pdf;

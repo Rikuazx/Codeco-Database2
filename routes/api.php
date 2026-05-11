@@ -14,8 +14,8 @@ use App\Http\Controllers\StudentController;
 use App\Http\Controllers\ClassController;
 
 // Users
-route::put('/users/{id}', [UserController::class, 'update']);
-route::delete('/users/{id}', [UserController::class, 'destroy']);
+Route::put('/users/{id}', [UserController::class, 'update']);
+Route::delete('/users/{id}', [UserController::class, 'destroy']);
 Route::post('/users', [UserController::class, 'store']);
 Route::get('/users', [UserController::class, 'index']);
 
@@ -29,7 +29,8 @@ Route::post('/students', [StudentController::class, 'store']);
 Route::get('/students', [StudentController::class, 'index']);
 
 // Classes
-route::delete('/classes/{id}', [ClassController::class, 'destroy']);
+Route::put('/classes/{id}', [ClassController::class, 'update']);
+Route::delete('/classes/{id}', [ClassController::class, 'destroy']);
 Route::post('/classes', [ClassController::class, 'store']);
 Route::get('/classes', [ClassController::class, 'index']);
 Route::get('/classes/{id}', [ClassController::class, 'show']);

@@ -10,20 +10,22 @@ class ClassController extends Controller
 public function store(Request $request)
 {
     $request->validate([
-        'name' => 'required',
+        'name'           => 'required',
         'total_sessions' => 'required|integer',
-        'price' => 'required|numeric'
+        'price'          => 'required|numeric',
+        'description'    => 'nullable|string',
     ]);
 
     $class = \App\Models\Classes::create([
-        'name' => $request->name,
+        'name'           => $request->name,
+        'description'    => $request->description,
         'total_sessions' => $request->total_sessions,
-        'price' => $request->price
+        'price'          => $request->price,
     ]);
 
     return response()->json([
         'message' => 'Class created successfully',
-        'data' => $class
+        'data'    => $class
     ]);
 }
 
@@ -41,6 +43,17 @@ public function show($id)
 
     return response()->json($class);
 }
+public function update(Request $request, $id)
+{
+    $class = \App\Models\Classes::findOrFail($id);
+    $class->update($request->only(['name', 'description', 'price', 'total_sessions']));
+
+    return response()->json([
+        'message' => 'Class updated successfully',
+        'data'    => $class
+    ]);
+}
+
 public function destroy($id)
 {
     $class = \App\Models\Classes::findOrFail($id);
