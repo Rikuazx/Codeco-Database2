@@ -6,15 +6,20 @@ use Illuminate\Database\Eloquent\Model;
 
 class Student extends Model
 {
-protected $fillable = [
-    'user_id',
-    'status',
-    'type',
-    'registration_date',
+    protected $fillable = [
+        'user_id',
+        'status',
+        'type',
+        'registration_date',
+    ];
 
-];
-public function user()
-{
-    return $this->belongsTo(\App\Models\User::class);
-}
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function enrollments()
+    {
+        return $this->hasMany(Enrollment::class);
+    }
 }

@@ -8,8 +8,8 @@ class Teacher extends Model
 {
     protected $fillable = [
         'user_id',
+        'specialization',
         'priority_score',
-        'specialization'
     ];
 
     // 🔗 Relationships
@@ -22,8 +22,9 @@ class Teacher extends Model
     {
         return $this->hasMany(TeacherAvailability::class);
     }
-        public function user()
-{
-    return $this->belongsTo(\App\Models\User::class);
-}
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

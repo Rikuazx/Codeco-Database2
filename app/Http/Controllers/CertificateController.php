@@ -25,7 +25,7 @@ class CertificateController extends Controller
         ]);
 
         // Cek status enrollment
-        $enrollment = Enrollment::with(['student.user', 'class'])->findOrFail($request->enrollment_id);
+        $enrollment = Enrollment::with(['student.user', 'course'])->findOrFail($request->enrollment_id);
 
         if ($enrollment->status !== 'completed') {
             return response()->json([
@@ -41,8 +41,8 @@ class CertificateController extends Controller
         }
 
         $student = $enrollment->student;
-        $course = $enrollment->class;
-        $courseCode = Str::upper(Str::substr(preg_replace('/[^a-zA-Z]/', '', $course->course_name), 0, 4));
+        $course = $enrollment->course;
+        $courseCode = Str::upper(Str::substr(preg_replace('/[^a-zA-Z]/', '', $course->name), 0, 4));
         $year = now()->year;
 
         $certNumber = Certificate::generateNumber($courseCode, $year);
@@ -52,10 +52,10 @@ class CertificateController extends Controller
         // Generate PDF
         $pdf = $this->buildPDF(
             studentName: $student->user->name,
-            courseName: $course->course_name,
+            courseName: $course->name,
             certNumber: $certNumber,
             issuedDate: now()->format('d F Y'),
-            signerRight: $request->signer_right ?? 'Ketua Panitia',
+            signerRight: $request->signer_right ?? 'Mr. Ilham',
             description: $course->description ?? '',
         );
 
@@ -122,10 +122,10 @@ class CertificateController extends Controller
 
         $pdf = $this->buildPDF(
             studentName: $student->user->name,
-            courseName: $course->course_name,
+            courseName: $course->name,
             certNumber: $certificate->certificate_number,
             issuedDate: $certificate->issued_at?->format('d F Y') ?? now()->format('d F Y'),
-            signerRight: 'Ketua Panitia',
+            signerRight: 'Mr. Ilham',
             description: $course->description ?? '',
         );
 

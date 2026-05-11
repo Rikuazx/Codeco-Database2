@@ -6,10 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class Payment extends Model
 {
-  protected $fillable = [
-    'enrollment_id',
-    'amount',
-    'status' => 'pending',
-
-];  //
+    protected $fillable = [
+        'enrollment_id',
+        'amount',
+        'status',
+        'paid_at',
+    ];
 }
