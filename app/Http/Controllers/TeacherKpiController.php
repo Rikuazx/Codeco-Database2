@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\ClassSession;
+use App\Models\Feedback;
+use App\Models\TeacherAvailability;
 
 class TeacherKpiController extends Controller
 {
@@ -43,6 +46,7 @@ $submitted = TeacherAvailability::where('teacher_id', $teacher_id)
 
 $availabilityScore = ($submitted / $expected) * 30;
 
+$total = $feedbackScore + $attendanceScore + $availabilityScore;
 
     // save result
     \App\Models\TeacherKpi::updateOrCreate(

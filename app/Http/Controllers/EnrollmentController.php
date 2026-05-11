@@ -6,7 +6,7 @@ use App\Models\Enrollment;
 use App\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\Classes; // or ClassModel (depends on your model name)
+use App\Models\Classes;
 class EnrollmentController extends Controller
 {
     public function store(Request $request)
