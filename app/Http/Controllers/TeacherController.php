@@ -21,6 +21,7 @@ class TeacherController extends Controller
 
 public function index()
 {
-    return \App\Models\Teacher::with('user')->get();
+    $teachers = \App\Models\Teacher::with('user')->get();
+    return response()->json($teachers);
 }
 }

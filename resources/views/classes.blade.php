@@ -33,19 +33,28 @@ async function loadClasses() {
 <script>
     
 async function createClass() {
-    await fetch('/api/classes', {
+
+    const payload = {
+        name: document.getElementById('class_name').value,
+        total_sessions: document.getElementById('total_sessions').value,
+        price: document.getElementById('price').value
+    };
+
+    console.log(payload);
+
+    const res = await fetch('http://127.0.0.1:8000/api/classes', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            name: document.getElementById('class_name').value,
-            price: document.getElementById('price').value,
-            total_sessions: document.getElementById('total_sessions').value
-        })
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify(payload)
     });
 
-    document.getElementById('class_name').value = '';
-    document.getElementById('price').value = '';
-    document.getElementById('total_sessions').value = '';
+    const text = await res.text();
+
+    console.log(text);
+
     loadClasses();
 }
 

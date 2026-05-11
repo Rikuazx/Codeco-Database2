@@ -6,5 +6,15 @@ use Illuminate\Database\Eloquent\Model;
 
 class Student extends Model
 {
-    //
+protected $fillable = [
+    'user_id',
+    'status',
+    'type',
+    'registration_date',
+
+];
+public function user()
+{
+    return $this->belongsTo(\App\Models\User::class);
+}
 }

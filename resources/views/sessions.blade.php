@@ -9,7 +9,7 @@
 
 <h3>Create Sessions from Class</h3>
 <select id="class_selector"></select>
-<button onclick="generateClassSessions()">Generate Sessions</button>
+<button onclick="generateClassSessions(document.getElementById('class_selector').value)">Generate Sessions</button>
 
 <h3>Edit Session</h3>
 
@@ -48,46 +48,91 @@ async function loadTeachers() {
 }
 
 async function loadSessions() {
+
     const res = await fetch('/api/sessions');
     const data = await res.json();
+
     sessionsData = data;
 
     let html = '';
 
     data.forEach(s => {
-        const teacherName = s.teacher && s.teacher.user ? s.teacher.user.name : (s.teacher ? `Teacher ${s.teacher.id}` : 'None');
+
+        const teacherName =
+            s.teacher && s.teacher.user
+                ? s.teacher.user.name
+                : (s.teacher
+                    ? `Teacher ${s.teacher.id}`
+                    : 'None');
+
         html += `
         <li>
             Session ${s.id} |
-            ${s.start_time} |
+
+            Start: ${s.start_time} |
+
+            End: ${s.end_time} |
+
             Teacher: ${teacherName}
-            <button onclick="complete(${s.id})">Complete</button>
-            <button onclick="editSession(${s.id})">Edit</button>
-            <button onclick="deleteSession(${s.id})">Delete</button>
+
+            <button onclick="complete(${s.id})">
+                Complete
+            </button>
+
+            <button onclick="editSession(${s.id})">
+                Edit
+            </button>
+
+            <button onclick="deleteSession(${s.id})">
+                Delete
+            </button>
         </li>`;
     });
 
     document.getElementById('sessions').innerHTML = html;
 }
 
-async function generateClassSessions() {
-    const classId = document.getElementById('class_selector').value;
-    if (!classId) {
-        alert('Select a class first');
+async function generateClassSessions(classId) {
+
+    const res = await fetch(
+        `http://127.0.0.1:8000/api/generate-sessions/${classId}`,
+        {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json'
+            }
+        }
+    );
+
+    const text = await res.text();
+
+    console.log("STATUS:", res.status);
+    console.log("RESPONSE:", text);
+
+    if (!res.ok) {
+        alert(text);
         return;
     }
-
-    await fetch(`/api/generate-sessions/${classId}`, {
-        method: 'POST'
-    });
 
     loadSessions();
 }
 
-async function complete(id) {
-    await fetch(`/api/sessions/${id}/complete`, {
-        method: 'POST'
-    });
+async function complete(id)
+{
+    const res = await fetch(
+        `http://127.0.0.1:8000/api/sessions/${id}/complete`,
+        {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json'
+            }
+        }
+    );
+
+    const text = await res.text();
+
+    console.log(text);
+
     loadSessions();
 }
 
