@@ -8,6 +8,7 @@ class Teacher extends Model
 {
     protected $fillable = [
         'user_id',
+        'priority_score',
         'specialization'
     ];
 
@@ -21,4 +22,8 @@ class Teacher extends Model
     {
         return $this->hasMany(TeacherAvailability::class);
     }
+        public function user()
+{
+    return $this->belongsTo(\App\Models\User::class);
+}
 }

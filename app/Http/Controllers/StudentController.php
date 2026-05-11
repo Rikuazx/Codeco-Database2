@@ -23,4 +23,10 @@ class StudentController extends Controller
 
     return response()->json($student);
 }
+
+public function index()
+{
+    $students = \App\Models\Student::with('user')->get();
+    return response()->json($students);
+}
 }
