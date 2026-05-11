@@ -6,16 +6,16 @@ use Illuminate\Database\Eloquent\Model;
 
 class Classes extends Model
 {
-    protected $fillable = [
-    'class_id',
-    'start_time',
-    'end_time',
-    'teacher_id'
+  protected $fillable = [
+    'name',
+    'total_sessions',
+    'price'
 ];
 public function sessions()
 
 {
-    
+    return $this->hasMany(\App\Models\ClassSession::class, 'class_id');
+
     return $this->hasMany(ClassSession::class);
 }
 }

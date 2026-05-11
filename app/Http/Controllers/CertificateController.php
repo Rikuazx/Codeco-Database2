@@ -74,7 +74,7 @@ class CertificateController extends Controller
             'certificate_number' => $certNumber,
             'certificate_url' => asset('storage/' . $filePath),
             'issued_at' => now(),
-            'issued_by' => auth()->user()->id ?? 'system',
+            'issued_by' => auth()->user()?->id ?? 'system',
             'certification_status' => 'issued',
         ]);
 

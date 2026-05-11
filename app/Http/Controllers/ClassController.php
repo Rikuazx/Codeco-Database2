@@ -7,25 +7,30 @@ use App\Models\Classes;
 
 class ClassController extends Controller
 {
-    public function store(Request $request)
+public function store(Request $request)
 {
     $request->validate([
         'name' => 'required',
-        'price' => 'required|numeric',
-        'total_sessions' => 'required|integer'
+        'total_sessions' => 'required|integer',
+        'price' => 'required|numeric'
     ]);
 
-    $class = \App\Models\Classes::create($request->all());
+    $class = \App\Models\Classes::create([
+        'name' => $request->name,
+        'total_sessions' => $request->total_sessions,
+        'price' => $request->price
+    ]);
 
-    return response()->json($class);
+    return response()->json([
+        'message' => 'Class created successfully',
+        'data' => $class
+    ]);
 }
 
 
 public function index()
 {
-    $classes = Classes::with('sessions')->get();
-
-    return response()->json($classes);
+    return \App\Models\Classes::all();
 }
 
 public function show($id)
@@ -38,9 +43,12 @@ public function show($id)
 }
 public function destroy($id)
 {
-    Classes::findOrFail($id)->delete();
+    $class = \App\Models\Classes::findOrFail($id);
+    $class->delete();
 
-    return response()->json(['message' => 'Deleted']);
+    return response()->json([
+        'message' => 'Class deleted'
+    ]);
 }
 
 }
