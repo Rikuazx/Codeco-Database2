@@ -121,7 +121,7 @@ public function autoAssignTeacher($id)
         ], 400);
     }
 
-    // ✅ Assign teacher
+    // Assign teacher
     $session->update([
         'teacher_id' => $teacher->id
     ]);
@@ -129,6 +129,42 @@ public function autoAssignTeacher($id)
     return response()->json([
         'message' => 'Teacher assigned successfully',
         'teacher_id' => $teacher->id
+    ]);
+}
+
+public function index()
+{
+    return \App\Models\ClassSession::with([
+        'teacher.user',
+        'class'
+    ])->get();
+}
+public function update(Request $request, $id)
+{
+    $session = ClassSession::findOrFail($id);
+    
+    $request->validate([
+        'start_time' => 'nullable|date',
+        'end_time' => 'nullable|date',
+        'status' => 'nullable|in:scheduled,completed,cancelled',
+        'teacher_id' => 'nullable|exists:teachers,id',
+    ]);
+
+    $session->update($request->all());
+
+    return response()->json([
+        'message' => 'Session updated successfully',
+        'data' => $session
+    ]);
+}
+public function destroy($id)
+{
+    $session = \App\Models\ClassSession::findOrFail($id);
+
+    $session->delete();
+
+    return response()->json([
+        'message' => 'Session deleted successfully'
     ]);
 }
 }
