@@ -8,6 +8,7 @@ use App\Models\ClassSession;
 use Carbon\Carbon;
 use App\Models\Feedback;
 use App\Models\Teacher;
+use App\Models\Enrollment;
 class ClassSessionController extends Controller
 {
 public function generateSessions($class_id)
@@ -74,9 +75,22 @@ public function complete($id)
         $session->status = 'completed';
         $session->save();
 
+        // ── Auto-complete enrollment ──────────────────────────────────────────
+        // Jika semua sesi di kelas sudah completed → set enrollment jadi completed
+        $totalSessions     = ClassSession::where('class_id', $session->class_id)->count();
+        $completedSessions = ClassSession::where('class_id', $session->class_id)
+                                ->where('status', 'completed')->count();
+
+        if ($totalSessions > 0 && $totalSessions === $completedSessions) {
+            Enrollment::where('class_id', $session->class_id)
+                      ->whereIn('status', ['pending', 'active'])
+                      ->update(['status' => 'completed']);
+        }
+        // ─────────────────────────────────────────────────────────────────────
+
         return response()->json([
             'message' => 'Session completed successfully',
-            'data' => $session
+            'data'    => $session
         ]);
 
     } catch (\Exception $e) {

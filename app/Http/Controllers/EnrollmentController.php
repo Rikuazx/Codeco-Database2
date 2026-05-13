@@ -34,9 +34,9 @@ class EnrollmentController extends Controller
         // create enrollment
         $enrollment = Enrollment::create([
             'student_id' => $request->student_id,
-            'class_id' => $request->class_id,
-            'price' => $class->price,
-            'status' => 'pending',
+            'class_id'   => $request->class_id,
+            'price'      => $class->price,
+            'status'     => 'active', // langsung active karena tidak ada flow payment confirmation
         ]);
 
         // create payment
@@ -52,6 +52,15 @@ class EnrollmentController extends Controller
         ]);
         
     });
+}
+
+public function index()
+{
+    $enrollments = Enrollment::with(['student.user', 'course'])
+        ->latest()
+        ->get();
+
+    return response()->json(['data' => $enrollments]);
 }
 
 }

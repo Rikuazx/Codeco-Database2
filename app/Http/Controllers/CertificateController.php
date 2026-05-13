@@ -77,7 +77,7 @@ class CertificateController extends Controller
             'certificate_number' => $certNumber,
             'certificate_url' => asset('storage/' . $filePath),
             'issued_at' => now(),
-            'issued_by' => auth()->user()->id ?? 'system',
+            'issued_by' => auth()->check() ? 'admin' : 'system',
             'certification_status' => 'issued',
         ]);
 
@@ -157,7 +157,32 @@ class CertificateController extends Controller
         return response()->json(['data' => $certificate]);
     }
 
+    // ─────────────────────────────────────────────────────────────────────
+    // GET /api/students/{student_id}/certificates
+    // Semua sertifikat milik satu student.
     // ─────────────────────────────────────────────────────────────────────────
+    public function byStudent(int $studentId)
+    {
+        $certificates = Certificate::with(['course', 'enrollment'])
+            ->where('student_id', $studentId)
+            ->where('certification_status', 'issued')
+            ->latest('issued_at')
+            ->get()
+            ->map(function ($cert) {
+                return [
+                    'id'                   => $cert->id,
+                    'certificate_number'   => $cert->certificate_number,
+                    'course_name'          => $cert->course->name ?? '—',
+                    'issued_at'            => $cert->issued_at?->format('d F Y'),
+                    'certification_status' => $cert->certification_status,
+                    'download_url'         => url('/api/certificates/' . $cert->id . '/download'),
+                ];
+            });
+
+        return response()->json(['data' => $certificates]);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
     // Private: bangun objek CertificatePDF
     // ─────────────────────────────────────────────────────────────────────────
     private function buildPDF(

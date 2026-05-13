@@ -45,6 +45,7 @@ Route::get('/sessions', [ClassSessionController::class, 'index']);
 Route::delete('/sessions/{id}', [ClassSessionController::class, 'destroy']);
 
 // Enrollments
+Route::get('/enrollments', [EnrollmentController::class, 'index']);
 Route::post('/enroll', [EnrollmentController::class, 'store']);
 
 // Attendance
@@ -63,6 +64,7 @@ Route::post('/certificates', [CertificateController::class, 'store']);
 Route::get('/certificates/{id}', [CertificateController::class, 'show']);
 Route::get('/certificates/{id}/download', [CertificateController::class, 'download']);
 Route::get('/test-certificate', [CertificateController::class, 'test']);
+Route::get('/students/{student_id}/certificates', [CertificateController::class, 'byStudent']);
 
 // Auth
 Route::get('/user', function (Request $request) {
