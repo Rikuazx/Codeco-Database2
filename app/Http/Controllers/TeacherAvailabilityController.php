@@ -13,6 +13,7 @@ class TeacherAvailabilityController extends Controller
         'type' => 'required|in:time_range,full_day,unavailable',
         'start_time' => 'nullable',
         'end_time' => 'nullable',
+        
     ]);
 
     $now = now();
@@ -36,6 +37,7 @@ class TeacherAvailabilityController extends Controller
 
     $availability = \App\Models\TeacherAvailability::create([
         'teacher_id' => $request->teacher_id,
+        'date' => $periodStart,
         'period_start' => $periodStart,
         'period_end' => $periodEnd,
         'type' => $request->type,
@@ -47,6 +49,23 @@ class TeacherAvailabilityController extends Controller
     return response()->json([
         'message' => $isLate ? 'Submitted late' : 'Submitted on time',
         'data' => $availability
+    ]);
+}
+
+public function index()
+{
+    return \App\Models\TeacherAvailability::with(
+        'teacher.user'
+    )->get();
+}
+
+public function destroy($id)
+{
+    \App\Models\TeacherAvailability::findOrFail($id)
+        ->delete();
+
+    return response()->json([
+        'message' => 'Availability deleted'
     ]);
 }
 }

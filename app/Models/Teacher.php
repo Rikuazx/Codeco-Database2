@@ -13,17 +13,23 @@ class Teacher extends Model
     ];
 
     // 🔗 Relationships
-    public function classSessions()
+public function classSessions()
     {
         return $this->hasMany(ClassSession::class);
     }
 
-    public function availabilities()
+public function availabilities()
     {
         return $this->hasMany(TeacherAvailability::class);
     }
-        public function user()
-{
+public function user()
+    {
     return $this->belongsTo(\App\Models\User::class);
-}
+    }
+public function kpis()
+    {
+        return $this->hasMany(
+            TeacherKpi::class
+        );
+    }
 }

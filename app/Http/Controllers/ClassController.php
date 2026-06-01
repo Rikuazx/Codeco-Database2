@@ -10,16 +10,18 @@ class ClassController extends Controller
 public function store(Request $request)
 {
     $request->validate([
-        'name' => 'required',
-        'total_sessions' => 'required|integer',
-        'price' => 'required|numeric'
-    ]);
+    'name' => 'required',
+    'description' => 'nullable|string',
+    'total_sessions' => 'required|integer',
+    'price' => 'required|numeric'
+]);
 
     $class = \App\Models\Classes::create([
-        'name' => $request->name,
-        'total_sessions' => $request->total_sessions,
-        'price' => $request->price
-    ]);
+    'name' => $request->name,
+    'description' => $request->description,
+    'total_sessions' => $request->total_sessions,
+    'price' => $request->price
+]);
 
     return response()->json([
         'message' => 'Class created successfully',
@@ -31,6 +33,30 @@ public function store(Request $request)
 public function index()
 {
     return \App\Models\Classes::all();
+}
+
+public function update(Request $request, $id)
+{
+    $class = Classes::findOrFail($id);
+
+    $request->validate([
+        'name' => 'required',
+        'description' => 'nullable|string',
+        'total_sessions' => 'required|integer',
+        'price' => 'required|numeric',
+    ]);
+
+    $class->update([
+        'name' => $request->name,
+        'description' => $request->description,
+        'total_sessions' => $request->total_sessions,
+        'price' => $request->price,
+    ]);
+
+    return response()->json([
+        'message' => 'Class updated successfully',
+        'data' => $class
+    ]);
 }
 
 public function show($id)

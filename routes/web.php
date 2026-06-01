@@ -17,3 +17,9 @@ Route::get('/sessions', function () {
 Route::get('/feedback', function () {
     return view('feedback');
 });
+Route::get('/admin-student', function () {
+    return view('admin_student');
+});
+Route::get('/admin-teacher', function () {
+    return view('admin_teacher');
+});
