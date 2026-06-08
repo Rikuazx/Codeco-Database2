@@ -23,4 +23,14 @@ class Feedback extends Model
     {
         return $this->belongsTo(ClassSession::class, 'class_session_id');
     }
+
+    public function teacher()
+    {
+        return $this->belongsTo(Teacher::class);
+    }
+
+    public function student()
+    {
+        return $this->belongsTo(Student::class);
+    }
 }

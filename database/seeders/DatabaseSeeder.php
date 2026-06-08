@@ -15,11 +15,15 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        $this->call(RbacSeeder::class);
+
+        $adminRole = \App\Models\Role::where('slug', 'admin')->first();
 
         User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
+            'role' => 'admin',
+            'role_id' => $adminRole->id,
         ]);
     }
 }

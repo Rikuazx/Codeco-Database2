@@ -63,4 +63,22 @@ public function index()
     return response()->json(['data' => $enrollments]);
 }
 
+public function byStudent($student_id)
+{
+    $enrollments = Enrollment::with(['course'])
+        ->where('student_id', $student_id)
+        ->latest()
+        ->get();
+
+    return response()->json(['data' => $enrollments]);
+}
+
+public function destroy($id)
+{
+    $enrollment = Enrollment::findOrFail($id);
+    $enrollment->delete();
+
+    return response()->json(['message' => 'Enrollment deleted']);
+}
+
 }

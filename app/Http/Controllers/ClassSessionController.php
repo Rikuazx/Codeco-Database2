@@ -114,12 +114,15 @@ public function autoAssignTeacher($id)
     //  Find available teacher
     $teacher = Teacher::whereHas('availabilities', function ($q) use ($session) {
         $q->where('date', Carbon::parse($session->start_time)->toDateString())
-          ->where('is_available', true)
+          ->where('type', '!=', 'unavailable')
           ->where(function ($q2) use ($session) {
-              $q2->where('is_full_day', true)
+              $q2->where('type', 'full_day')
                  ->orWhere(function ($q3) use ($session) {
-                     $q3->where('start_time', '<=', $session->start_time)
-                        ->where('end_time', '>=', $session->end_time);
+                     $sessionStart = Carbon::parse($session->start_time)->toTimeString();
+                     $sessionEnd = Carbon::parse($session->end_time)->toTimeString();
+                     $q3->where('type', 'time_range')
+                        ->where('start_time', '<=', $sessionStart)
+                        ->where('end_time', '>=', $sessionEnd);
                  });
           });
     })
@@ -153,6 +156,29 @@ public function index()
         'class'
     ])->get();
 }
+
+public function byTeacher($teacher_id)
+{
+    $sessions = ClassSession::with(['class', 'teacher.user'])
+        ->where('teacher_id', $teacher_id)
+        ->orderBy('start_time', 'asc')
+        ->get()
+        ->map(function ($s) {
+            // Count enrolled students in this class
+            $enrolledCount = Enrollment::where('class_id', $s->class_id)
+                ->whereIn('status', ['active', 'pending', 'completed'])
+                ->count();
+            // Count feedbacks submitted for this session
+            $feedbackCount = Feedback::where('class_session_id', $s->id)->count();
+            return array_merge($s->toArray(), [
+                'enrolled_count'  => $enrolledCount,
+                'feedback_count'  => $feedbackCount,
+                'feedback_done'   => $feedbackCount >= $enrolledCount && $enrolledCount > 0,
+            ]);
+        });
+
+    return response()->json(['data' => $sessions]);
+}
 public function update(Request $request, $id)
 {
     $session = ClassSession::findOrFail($id);
@@ -163,6 +189,23 @@ public function update(Request $request, $id)
         'status' => 'nullable|in:scheduled,completed,cancelled',
         'teacher_id' => 'nullable|exists:teachers,id',
     ]);
+
+    // 🧠 Check for H-1 restriction on schedule changes
+    if ($request->has('start_time') || $request->has('end_time')) {
+        $newStart = $request->input('start_time');
+        $newEnd = $request->input('end_time');
+
+        if (($newStart && Carbon::parse($newStart)->ne(Carbon::parse($session->start_time))) || 
+            ($newEnd && Carbon::parse($newEnd)->ne(Carbon::parse($session->end_time)))) {
+            
+            $sessionStart = Carbon::parse($session->start_time);
+            if ($sessionStart->isBefore(now()->addDay())) {
+                return response()->json([
+                    'error' => 'Perubahan jadwal hanya diperbolehkan maksimal H-1 sebelum kelas berlangsung.'
+                ], 400);
+            }
+        }
+    }
 
     $session->update($request->all());
 

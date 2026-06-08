@@ -23,6 +23,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'role_id',
     ];
 
     /**
@@ -55,5 +56,21 @@ class User extends Authenticatable
     public function teacher()
     {
         return $this->hasOne(\App\Models\Teacher::class);
+    }
+
+    public function role()
+    {
+        return $this->belongsTo(Role::class);
+    }
+
+    public function hasPermission($permissionSlug)
+    {
+        if (!$this->relationLoaded('role')) {
+            $this->load('role.permissions');
+        }
+        if (!$this->role) {
+            return false;
+        }
+        return $this->role->permissions->contains('slug', $permissionSlug);
     }
 }

@@ -21,6 +21,8 @@ return new class extends Migration
 
         $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
 
+        $table->timestamp('new_start_time')->nullable();
+        $table->timestamp('new_end_time')->nullable();
         $table->timestamp('requested_at');
         $table->timestamps();
 });

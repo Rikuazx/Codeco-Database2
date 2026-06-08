@@ -10,6 +10,8 @@ class Teacher extends Model
         'user_id',
         'specialization',
         'priority_score',
+        'salary',
+        'salary_per_session',
     ];
 
     // 🔗 Relationships

@@ -12,6 +12,8 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\ClassController;
+use App\Http\Controllers\ScheduleChangeRequestController;
+use App\Http\Controllers\TeacherRequestController;
 
 // Users
 Route::put('/users/{id}', [UserController::class, 'update']);
@@ -22,6 +24,11 @@ Route::get('/users', [UserController::class, 'index']);
 // Teachers
 Route::post('/teachers', [TeacherController::class, 'store']);
 Route::get('/teachers', [TeacherController::class, 'index']);
+
+// Teacher Requests (Student → Teacher)
+Route::post('/teacher-requests', [TeacherRequestController::class, 'store']);
+Route::get('/teacher-requests', [TeacherRequestController::class, 'index']);
+Route::put('/teacher-requests/{id}/respond', [TeacherRequestController::class, 'respond']);
 
 // Students
 Route::put('/students/{id}', [StudentController::class, 'update']);
@@ -42,21 +49,35 @@ Route::post('/sessions/{id}/auto-assign', [ClassSessionController::class, 'autoA
 Route::put('/sessions/{id}', [ClassSessionController::class, 'update']);
 Route::post('/assign-teacher', [ClassSessionController::class, 'assignTeacher']);
 Route::get('/sessions', [ClassSessionController::class, 'index']);
+Route::get('/teachers/{teacher_id}/sessions', [ClassSessionController::class, 'byTeacher']);
 Route::delete('/sessions/{id}', [ClassSessionController::class, 'destroy']);
 
 // Enrollments
 Route::get('/enrollments', [EnrollmentController::class, 'index']);
 Route::post('/enroll', [EnrollmentController::class, 'store']);
+Route::get('/students/{student_id}/enrollments', [EnrollmentController::class, 'byStudent']);
+Route::delete('/enrollments/{id}', [EnrollmentController::class, 'destroy']);
 
 // Attendance
 Route::post('/attendance', [AttendanceController::class, 'markAttendance']);
 
 // Teacher Availability
 Route::post('/teacher-availability', [TeacherAvailabilityController::class, 'store']);
+Route::get('/teacher-availability', [TeacherAvailabilityController::class, 'all']);
+Route::get('/teacher-availability/{teacher_id}', [TeacherAvailabilityController::class, 'show']);
+
+// Schedule Change Requests
+Route::post('/schedule-change-requests', [ScheduleChangeRequestController::class, 'store']);
+Route::post('/schedule-change-requests/{id}/approve', [ScheduleChangeRequestController::class, 'approve']);
+Route::post('/schedule-change-requests/{id}/reject', [ScheduleChangeRequestController::class, 'reject']);
 
 // Feedback
 Route::post('/feedback', [FeedbackController::class, 'store']);
 Route::get('/feedback', [FeedbackController::class, 'index']);
+Route::get('/teachers/{teacher_id}/feedback', [FeedbackController::class, 'byTeacher']);
+Route::get('/students/{student_id}/feedback', [FeedbackController::class, 'byStudent']);
+Route::get('/sessions/{session_id}/enrolled-students', [FeedbackController::class, 'enrolledStudents']);
+Route::get('/teachers/{teacher_id}/salary', [FeedbackController::class, 'salaryHistory']);
 
 // Certificates
 Route::get('/certificates', [CertificateController::class, 'index']);

@@ -12,6 +12,7 @@ class ClassSession extends Model
         'start_time',
         'end_time',
         'status',
+        'is_salary_paid',
     ];
 
     // 🔗 Relationships
