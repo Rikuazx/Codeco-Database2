@@ -10,9 +10,16 @@ class TeacherKpi extends Model
         'teacher_id',
         'month',
         'year',
+        'category',
+        'notes',
         'feedback_score',
         'attendance_score',
         'availability_score',
         'total_score',
     ];
+
+    public function teacher()
+    {
+        return $this->belongsTo(Teacher::class);
+    }
 }

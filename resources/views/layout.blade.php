@@ -22,13 +22,15 @@
         <a href="/admin/enrollments">Enrollments</a> |
         <a href="/admin/sessions">Sessions</a> |
         <a href="/admin/schedule"> Schedule</a> |
-        <a href="/admin/certificates">Certificates</a>
+        <a href="/admin/certificates">Certificates</a> |
+        <a href="/admin/kpi">KPI</a>
     @elseif (session('simulated_role') === 'teacher')
         <span class="step">[Teacher]</span>
         <a href="/teacher/my-classes">My Classes</a> |
         <a href="/teacher/availability">Availability</a> |
         <a href="/teacher/feedback">Feedback</a> |
-        <a href="/teacher/salary">Salary</a>
+        <a href="/teacher/salary">Salary</a> |
+        <a href="/teacher/kpi">KPI</a>
     @elseif (session('simulated_role') === 'student')
         <span class="step">[Student]</span>
         <a href="/student/my-classes">My Classes</a> |

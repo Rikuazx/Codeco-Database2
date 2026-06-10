@@ -14,6 +14,8 @@ use App\Http\Controllers\StudentController;
 use App\Http\Controllers\ClassController;
 use App\Http\Controllers\ScheduleChangeRequestController;
 use App\Http\Controllers\TeacherRequestController;
+use App\Http\Controllers\CancellationLogController;
+use App\Http\Controllers\TeacherKpiController;
 
 // Users
 Route::put('/users/{id}', [UserController::class, 'update']);
@@ -66,6 +68,15 @@ Route::post('/attendance', [AttendanceController::class, 'markAttendance']);
 Route::post('/teacher-availability', [TeacherAvailabilityController::class, 'store']);
 Route::get('/teacher-availability', [TeacherAvailabilityController::class, 'all']);
 Route::get('/teacher-availability/{teacher_id}', [TeacherAvailabilityController::class, 'show']);
+Route::post('/teacher-availability/lock-week', [TeacherAvailabilityController::class, 'lockWeekOne']);
+Route::post('/teacher-availability/promote-week', [TeacherAvailabilityController::class, 'promoteWeekTwo']);
+Route::get('/teachers/{teacher_id}/cancellation-stats', [TeacherAvailabilityController::class, 'cancellationStats']);
+
+// Cancellation Logs
+Route::post('/cancellation-logs', [CancellationLogController::class, 'store']);
+Route::get('/cancellation-logs', [CancellationLogController::class, 'index']);
+Route::put('/cancellation-logs/{id}/validate', [CancellationLogController::class, 'validateCancellation']);
+Route::get('/teachers/{teacher_id}/sanction-status', [CancellationLogController::class, 'teacherSanctionStatus']);
 
 // Schedule Change Requests
 Route::post('/schedule-change-requests', [ScheduleChangeRequestController::class, 'store']);
@@ -87,6 +98,12 @@ Route::get('/certificates/{id}', [CertificateController::class, 'show']);
 Route::get('/certificates/{id}/download', [CertificateController::class, 'download']);
 Route::get('/test-certificate', [CertificateController::class, 'test']);
 Route::get('/students/{student_id}/certificates', [CertificateController::class, 'byStudent']);
+
+// KPI
+Route::post('/kpi/calculate/{teacher_id}', [TeacherKpiController::class, 'calculate']);
+Route::post('/kpi/calculate-all', [TeacherKpiController::class, 'calculateAll']);
+Route::get('/kpi', [TeacherKpiController::class, 'index']);
+Route::get('/kpi/{teacher_id}', [TeacherKpiController::class, 'show']);
 
 // Auth
 Route::get('/user', function (Request $request) {

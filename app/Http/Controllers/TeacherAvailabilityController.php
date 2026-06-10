@@ -7,6 +7,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use App\Models\TeacherAvailability;
 use App\Models\AvailabilitySubmission;
+use App\Models\Teacher;
 
 class TeacherAvailabilityController extends Controller
 {
@@ -41,20 +42,38 @@ class TeacherAvailabilityController extends Controller
         $periodStart = now()->addWeek()->startOfWeek()->toDateString();
         $periodEnd = now()->addWeek()->startOfWeek()->addDays(13)->toDateString();
 
+        // 🧠 Week boundary: first 7 days = week 1, next 7 = week 2
+        $week1End = Carbon::parse($periodStart)->addDays(6)->toDateString();
+
         // 🧠 Deadline check: Friday at 18:00 WIB of the current week
         $deadline = now()->startOfWeek()->addDays(4)->setTime(18, 0, 0);
         $isLate = $now->gt($deadline);
 
         $availabilitiesInput = $request->input('availabilities');
         $availableCount = 0;
+        $teacherId = $request->teacher_id;
 
-        // 🧠 Validate input dates and time ranges
+        // 🧠 Check if there are locked slots for week-1 that shouldn't be modified
+        $lockedSlots = TeacherAvailability::where('teacher_id', $teacherId)
+            ->whereBetween('date', [$periodStart, $periodEnd])
+            ->where('is_locked', true)
+            ->pluck('date')
+            ->toArray();
+
+        // 🧠 Validate input dates, time ranges, and locked slots
         foreach ($availabilitiesInput as $index => $item) {
             $date = Carbon::parse($item['date']);
             if ($date->lt(Carbon::parse($periodStart)) || $date->gt(Carbon::parse($periodEnd))) {
                 return response()->json([
                     'error' => "Date {$item['date']} is outside the allowed 2-week period ($periodStart to $periodEnd)."
                 ], 400);
+            }
+
+            // 🧠 Block perubahan pada slot yang sudah di-lock (minggu 1 yang final)
+            if (in_array($item['date'], $lockedSlots)) {
+                return response()->json([
+                    'error' => "Tanggal {$item['date']} sudah berstatus TETAP (locked) dan tidak bisa diubah. Hubungi admin jika perlu perubahan."
+                ], 403);
             }
 
             if ($item['type'] === 'time_range') {
@@ -71,7 +90,6 @@ class TeacherAvailabilityController extends Controller
         }
 
         // 🧠 Conflict detection: availability tidak boleh sama dengan teacher lain
-        $teacherId = $request->teacher_id;
         foreach ($availabilitiesInput as $index => $item) {
             // Skip unavailable slots — no conflict possible
             if ($item['type'] === 'unavailable') {
@@ -125,10 +143,11 @@ class TeacherAvailabilityController extends Controller
         }
 
         // 🧠 Save records in a database transaction
-        $data = DB::transaction(function () use ($request, $periodStart, $periodEnd, $availabilitiesInput, $now, $isLate) {
-            // Clear existing records for this teacher in this 2-week period
-            TeacherAvailability::where('teacher_id', $request->teacher_id)
+        $data = DB::transaction(function () use ($request, $periodStart, $periodEnd, $week1End, $availabilitiesInput, $now, $isLate, $teacherId, $lockedSlots) {
+            // Clear existing records for this teacher in this 2-week period (except locked ones)
+            TeacherAvailability::where('teacher_id', $teacherId)
                 ->whereBetween('date', [$periodStart, $periodEnd])
+                ->where('is_locked', false)
                 ->delete();
 
             $providedDates = [];
@@ -139,17 +158,29 @@ class TeacherAvailabilityController extends Controller
             $savedAvailabilities = [];
             $startDate = Carbon::parse($periodStart);
 
-            // Populate all 14 days (missing days default to unavailable)
+            // Populate all 14 days (missing days default to unavailable, skip locked)
             for ($i = 0; $i < 14; $i++) {
                 $currentDate = $startDate->copy()->addDays($i)->toDateString();
+
+                // Skip locked slots — mereka sudah ada di database
+                if (in_array($currentDate, $lockedSlots)) {
+                    continue;
+                }
+
+                // 🧠 Determine week number and status
+                $weekNumber = $currentDate <= $week1End ? 1 : 2;
+                $weekStatus = $weekNumber === 1 ? 'confirmed' : 'tentative';
 
                 if (isset($providedDates[$currentDate])) {
                     $item = $providedDates[$currentDate];
                     $savedAvailabilities[] = TeacherAvailability::create([
-                        'teacher_id' => $request->teacher_id,
+                        'teacher_id' => $teacherId,
                         'date' => $currentDate,
                         'period_start' => $periodStart,
                         'period_end' => $periodEnd,
+                        'week_number' => $weekNumber,
+                        'week_status' => $weekStatus,
+                        'is_locked' => false,
                         'type' => $item['type'],
                         'start_time' => $item['type'] === 'time_range' ? $item['start_time'] : null,
                         'end_time' => $item['type'] === 'time_range' ? $item['end_time'] : null,
@@ -157,10 +188,13 @@ class TeacherAvailabilityController extends Controller
                     ]);
                 } else {
                     $savedAvailabilities[] = TeacherAvailability::create([
-                        'teacher_id' => $request->teacher_id,
+                        'teacher_id' => $teacherId,
                         'date' => $currentDate,
                         'period_start' => $periodStart,
                         'period_end' => $periodEnd,
+                        'week_number' => $weekNumber,
+                        'week_status' => $weekStatus,
+                        'is_locked' => false,
                         'type' => 'unavailable',
                         'start_time' => null,
                         'end_time' => null,
@@ -172,7 +206,7 @@ class TeacherAvailabilityController extends Controller
             // Save submission metadata
             AvailabilitySubmission::updateOrCreate(
                 [
-                    'teacher_id' => $request->teacher_id,
+                    'teacher_id' => $teacherId,
                     'period_start' => $periodStart,
                     'period_end' => $periodEnd,
                 ],
@@ -213,9 +247,87 @@ class TeacherAvailabilityController extends Controller
                 'type'         => $a->type,
                 'start_time'   => $a->start_time,
                 'end_time'     => $a->end_time,
+                'week_number'  => $a->week_number,
+                'week_status'  => $a->week_status,
+                'is_locked'    => $a->is_locked,
             ]);
 
         return response()->json(['data' => $availabilities]);
     }
-}
 
+    // 🧠 POST /api/teacher-availability/lock-week — Lock semua slot minggu-1 (jadwal final)
+    public function lockWeekOne(Request $request)
+    {
+        $request->validate([
+            'teacher_id' => 'required|exists:teachers,id',
+            'period_start' => 'required|date_format:Y-m-d',
+        ]);
+
+        $periodStart = $request->period_start;
+        $week1End = Carbon::parse($periodStart)->addDays(6)->toDateString();
+
+        $updated = TeacherAvailability::where('teacher_id', $request->teacher_id)
+            ->where('week_number', 1)
+            ->whereBetween('date', [$periodStart, $week1End])
+            ->update([
+                'is_locked' => true,
+                'week_status' => 'confirmed',
+            ]);
+
+        return response()->json([
+            'message' => "Minggu pertama telah dikunci (locked). $updated slot diperbarui.",
+            'locked_count' => $updated,
+        ]);
+    }
+
+    // 🧠 POST /api/teacher-availability/promote-week — Promote minggu-2 jadi confirmed
+    public function promoteWeekTwo(Request $request)
+    {
+        $request->validate([
+            'teacher_id' => 'required|exists:teachers,id',
+            'period_start' => 'required|date_format:Y-m-d',
+        ]);
+
+        $periodStart = $request->period_start;
+        $week2Start = Carbon::parse($periodStart)->addDays(7)->toDateString();
+        $week2End = Carbon::parse($periodStart)->addDays(13)->toDateString();
+
+        $updated = TeacherAvailability::where('teacher_id', $request->teacher_id)
+            ->where('week_number', 2)
+            ->whereBetween('date', [$week2Start, $week2End])
+            ->update([
+                'week_status' => 'confirmed',
+                'is_locked' => true,
+            ]);
+
+        return response()->json([
+            'message' => "Minggu kedua telah dipromosikan menjadi TETAP (confirmed). $updated slot diperbarui.",
+            'promoted_count' => $updated,
+        ]);
+    }
+
+    // 🧠 GET /api/teachers/{teacher_id}/cancellation-stats
+    public function cancellationStats($teacher_id)
+    {
+        $teacher = Teacher::findOrFail($teacher_id);
+        $month = now()->month;
+        $year = now()->year;
+        $count = $teacher->getMonthlyCancellationCount($month, $year);
+        $shouldReduce = $teacher->shouldReducePriority();
+
+        return response()->json([
+            'teacher_id' => $teacher_id,
+            'month' => $month,
+            'year' => $year,
+            'cancellation_count' => $count,
+            'max_allowed' => 2,
+            'exceeded' => $shouldReduce,
+            'sanctions' => $shouldReduce ? [
+                'Prioritas jadwal dikurangi',
+                'Evaluasi kerja sama',
+                'Kemungkinan kerja sama dihentikan',
+            ] : [],
+            'priority_score' => $teacher->priority_score,
+        ]);
+    }
+}
