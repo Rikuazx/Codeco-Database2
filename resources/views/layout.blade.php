@@ -12,7 +12,7 @@
   nav .step { font-size: 0.75em; color: #888; }
 </style>
 <nav>
-    <a href="/"><strong>🏡 Home (Role Switcher)</strong></a> |
+    <a href="/"><strong> Home (Role Switcher)</strong></a> |
 
     @if (session('simulated_role') === 'admin')
         <span class="step">[Admin]</span>
@@ -21,6 +21,7 @@
         <a href="/admin/classes">Classes</a> |
         <a href="/admin/enrollments">Enrollments</a> |
         <a href="/admin/sessions">Sessions</a> |
+        <a href="/admin/schedule"> Schedule</a> |
         <a href="/admin/certificates">Certificates</a>
     @elseif (session('simulated_role') === 'teacher')
         <span class="step">[Teacher]</span>

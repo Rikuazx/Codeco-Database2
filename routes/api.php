@@ -43,6 +43,7 @@ Route::get('/classes', [ClassController::class, 'index']);
 Route::get('/classes/{id}', [ClassController::class, 'show']);
 
 // Class Sessions
+Route::post('/sessions', [ClassSessionController::class, 'store']);
 Route::post('/generate-sessions/{class_id}', [ClassSessionController::class, 'generateSessions']);
 Route::post('/sessions/{id}/complete', [ClassSessionController::class, 'complete']);
 Route::post('/sessions/{id}/auto-assign', [ClassSessionController::class, 'autoAssignTeacher']);

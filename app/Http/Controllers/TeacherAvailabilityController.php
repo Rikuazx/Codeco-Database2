@@ -70,6 +70,53 @@ class TeacherAvailabilityController extends Controller
             }
         }
 
+        // 🧠 Conflict detection: availability tidak boleh sama dengan teacher lain
+        $teacherId = $request->teacher_id;
+        foreach ($availabilitiesInput as $index => $item) {
+            // Skip unavailable slots — no conflict possible
+            if ($item['type'] === 'unavailable') {
+                continue;
+            }
+
+            // Find other teachers' availability on the same date (excluding current teacher)
+            $conflictQuery = TeacherAvailability::where('date', $item['date'])
+                ->where('teacher_id', '!=', $teacherId)
+                ->where('type', '!=', 'unavailable');
+
+            if ($item['type'] === 'full_day') {
+                // full_day conflicts with ANY other teacher's availability on that date
+                $conflicts = $conflictQuery->with('teacher.user')->get();
+            } else {
+                // time_range: check for time overlap with other teachers
+                $conflicts = $conflictQuery->where(function ($q) use ($item) {
+                    $q->where(function ($q2) use ($item) {
+                        // Other teacher has full_day → always conflicts
+                        $q2->where('type', 'full_day');
+                    })->orWhere(function ($q2) use ($item) {
+                        // Other teacher has time_range with overlapping times
+                        $q2->where('type', 'time_range')
+                           ->where('start_time', '<', $item['end_time'])
+                           ->where('end_time', '>', $item['start_time']);
+                    });
+                })->with('teacher.user')->get();
+            }
+
+            if ($conflicts->isNotEmpty()) {
+                $conflictNames = $conflicts->map(function ($c) {
+                    return $c->teacher?->user?->name ?? "Teacher #{$c->teacher_id}";
+                })->unique()->implode(', ');
+
+                $dateFormatted = $item['date'];
+                $timeInfo = $item['type'] === 'time_range'
+                    ? " ({$item['start_time']} - {$item['end_time']})"
+                    : " (Full Day)";
+
+                return response()->json([
+                    'error' => "Konflik jadwal pada tanggal {$dateFormatted}{$timeInfo}: sudah diambil oleh {$conflictNames}. Silakan pilih waktu lain."
+                ], 409);
+            }
+        }
+
         // 🧠 Enforce minimum 2 sessions rule
         if ($availableCount < 2) {
             return response()->json([

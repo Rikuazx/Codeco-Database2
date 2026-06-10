@@ -117,18 +117,52 @@ function addSlot() {
     div.id = id;
     div.style.marginBottom = '4px';
     div.innerHTML = `
-        <input type="date" class="slot-date" min="${periodStart}" max="${periodEnd}">
-        <select class="slot-type" onchange="toggleTime(this)">
+        <input type="date" class="slot-date" min="${periodStart}" max="${periodEnd}" onchange="checkSlotConflict(this.parentNode)">
+        <select class="slot-type" onchange="toggleTime(this); checkSlotConflict(this.parentNode)">
             <option value="full_day">Full Day</option>
             <option value="time_range">Time Range</option>
             <option value="unavailable">Unavailable</option>
         </select>
-        <input type="time" class="slot-start" style="display:none;">
+        <input type="time" class="slot-start" style="display:none;" onchange="checkSlotConflict(this.parentNode)">
         s/d
-        <input type="time" class="slot-end" style="display:none;">
+        <input type="time" class="slot-end" style="display:none;" onchange="checkSlotConflict(this.parentNode)">
         <button onclick="document.getElementById('${id}').remove()">Hapus</button>
+        <span class="conflict-warn" style="color:red; font-weight:bold; margin-left:8px;"></span>
     `;
     container.appendChild(div);
+}
+
+function checkSlotConflict(row) {
+    const warn  = row.querySelector('.conflict-warn');
+    const date  = row.querySelector('.slot-date').value;
+    const type  = row.querySelector('.slot-type').value;
+    const start = row.querySelector('.slot-start').value;
+    const end   = row.querySelector('.slot-end').value;
+
+    warn.textContent = '';
+    if (!date || type === 'unavailable') return;
+
+    const others = allOtherAvail[date] ?? [];
+    if (others.length === 0) return;
+
+    let conflicting = [];
+    for (const o of others) {
+        if (type === 'full_day') {
+            // full_day conflicts with any non-unavailable slot
+            conflicting.push(o.teacher_name);
+        } else if (type === 'time_range' && start && end) {
+            if (o.type === 'full_day') {
+                conflicting.push(o.teacher_name);
+            } else if (o.type === 'time_range' && o.start_time < end && o.end_time > start) {
+                conflicting.push(o.teacher_name);
+            }
+        }
+    }
+
+    if (conflicting.length > 0) {
+        const names = [...new Set(conflicting)].join(', ');
+        warn.textContent = `⚠ sudah dipilih: ${names}`;
+    }
 }
 
 function toggleTime(sel) {
@@ -166,9 +200,11 @@ async function saveAvailability() {
     const data = await res.json();
 
     if (!res.ok) {
+        msg.style.color = 'red';
         msg.textContent = 'Error: ' + (data.error || 'Gagal menyimpan.');
         return;
     }
+    msg.style.color = 'green';
     msg.textContent = 'Berhasil disimpan! Status: ' + data.message;
     document.getElementById('slots-container').innerHTML = '';
     loadAvailability();

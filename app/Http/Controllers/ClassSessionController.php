@@ -11,6 +11,33 @@ use App\Models\Teacher;
 use App\Models\Enrollment;
 class ClassSessionController extends Controller
 {
+    /**
+     * Create a single session (used by admin schedule page).
+     */
+    public function store(Request $request)
+    {
+        $request->validate([
+            'class_id'   => 'required|exists:classes,id',
+            'teacher_id' => 'nullable|exists:teachers,id',
+            'start_time' => 'required|date',
+            'end_time'   => 'required|date|after:start_time',
+            'status'     => 'nullable|in:scheduled,completed,cancelled',
+        ]);
+
+        $session = ClassSession::create([
+            'class_id'   => $request->class_id,
+            'teacher_id' => $request->teacher_id,
+            'start_time' => $request->start_time,
+            'end_time'   => $request->end_time,
+            'status'     => $request->status ?? 'scheduled',
+        ]);
+
+        return response()->json([
+            'message' => 'Session created successfully',
+            'data'    => $session->load('teacher.user', 'class'),
+        ], 201);
+    }
+
 public function generateSessions($class_id)
 {
     $class = Classes::findOrFail($class_id);

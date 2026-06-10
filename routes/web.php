@@ -29,6 +29,7 @@ Route::middleware(['rbac:manage_users'])->prefix('admin')->group(function () {
     Route::get('/enrollments', function () { return view('admin.enrollments'); });
     Route::get('/sessions', function () { return view('admin.sessions'); });
     Route::get('/certificates', function () { return view('admin.certificates'); });
+    Route::get('/schedule', function () { return view('admin.schedule'); });
 });
 
 // 🛡️ Teacher Views
