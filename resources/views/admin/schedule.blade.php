@@ -42,6 +42,54 @@
 
 <ul id="sessions-list"></ul>
 
+<!-- ============ RESCHEDULE REQUESTS ============ -->
+<h3>📋 Reschedule Requests (Minggu 2 — Tentatif)</h3>
+<p>Daftar request reschedule dari teacher. Hanya request yang diajukan maks H-1 sebelum kelas yang valid.</p>
+
+<label>Filter Status:
+    <select id="filter-reschedule-status" onchange="loadRescheduleRequests()">
+        <option value="">-- Semua --</option>
+        <option value="pending" selected>Pending</option>
+        <option value="approved">Approved</option>
+        <option value="rejected">Rejected</option>
+    </select>
+</label>
+
+<table border="1" cellpadding="5" style="border-collapse:collapse; width:100%; max-width:1100px; margin-top:10px;">
+    <thead>
+        <tr style="background:#e3f2fd;">
+            <th>ID</th>
+            <th>Teacher</th>
+            <th>Sesi / Kelas</th>
+            <th>Jadwal Saat Ini</th>
+            <th>Alasan</th>
+            <th>Bukti</th>
+            <th>Jadwal Baru</th>
+            <th>Status</th>
+            <th>Diajukan</th>
+            <th>Aksi</th>
+        </tr>
+    </thead>
+    <tbody id="reschedule-requests-list">
+        <tr><td colspan="10">Klik "Load Schedule" untuk memuat data.</td></tr>
+    </tbody>
+</table>
+
+<!-- Admin Notes Modal -->
+<div id="admin-notes-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); z-index:999;">
+    <div style="background:white; max-width:500px; margin:100px auto; padding:20px; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+        <h4 id="modal-title" style="margin:0 0 12px;">Konfirmasi</h4>
+        <input type="hidden" id="modal-request-id">
+        <input type="hidden" id="modal-action">
+        <label>Catatan Admin (opsional):<br>
+            <textarea id="modal-admin-notes" rows="3" style="width:100%;" placeholder="Tulis catatan untuk teacher..."></textarea>
+        </label><br><br>
+        <button id="modal-confirm-btn" onclick="confirmModalAction()" style="font-weight:bold; padding:6px 16px; border:none; border-radius:4px; color:white; cursor:pointer;">Konfirmasi</button>
+        <button onclick="closeModal()" style="margin-left:4px;">Batal</button>
+        <p id="modal-msg" style="margin-top:6px;"></p>
+    </div>
+</div>
+
 <script>
 let allAvailabilities = [];
 let allTeachers = [];
@@ -73,6 +121,7 @@ async function loadAllData() {
         loadClasses(),
         loadAvailabilities(),
         loadSessions(),
+        loadRescheduleRequests(),
     ]);
     renderAvailabilityList();
 }
@@ -284,6 +333,154 @@ async function deleteSessionAdmin(sessionId) {
     if (!confirm('Yakin ingin menghapus session ini?')) return;
     await fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' });
     loadSessions();
+}
+
+// ============================================
+// RESCHEDULE REQUESTS MANAGEMENT
+// ============================================
+async function loadRescheduleRequests() {
+    const statusFilter = document.getElementById('filter-reschedule-status').value;
+    let url = '/api/schedule-change-requests';
+    if (statusFilter) url += `?status=${statusFilter}`;
+
+    try {
+        const res = await fetch(url);
+        const json = await res.json();
+        const requests = json.data || [];
+
+        const tbody = document.getElementById('reschedule-requests-list');
+
+        if (requests.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="10">Tidak ada reschedule request.</td></tr>';
+            return;
+        }
+
+        let html = '';
+        requests.forEach(r => {
+            const statusBadge = r.status === 'pending'
+                ? '<span style="color:white; background:#FF9800; padding:2px 8px; border-radius:4px; font-size:0.85em;">⏳ Pending</span>'
+                : r.status === 'approved'
+                ? '<span style="color:white; background:#4CAF50; padding:2px 8px; border-radius:4px; font-size:0.85em;">✅ Approved</span>'
+                : '<span style="color:white; background:#F44336; padding:2px 8px; border-radius:4px; font-size:0.85em;">❌ Rejected</span>';
+
+            const proofLink = r.proof_file
+                ? `<a href="/storage/${r.proof_file}" target="_blank">📎 Lihat Bukti</a>`
+                : '—';
+
+            let newSchedule = '—';
+            if (r.new_date) newSchedule = r.new_date;
+            if (r.new_start_time) newSchedule += `<br>${r.new_start_time}`;
+            if (r.new_end_time) newSchedule += ` s/d ${r.new_end_time}`;
+
+            const currentSchedule = r.session_start_time
+                ? `${r.session_start_time}<br>s/d ${r.session_end_time}`
+                : '—';
+
+            const requestedAt = r.requested_at
+                ? new Date(r.requested_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                : '—';
+
+            // H-1 check indicator
+            let h1Indicator = '';
+            if (r.session_start_time && r.requested_at) {
+                const sessionDate = new Date(r.session_start_time);
+                const requestDate = new Date(r.requested_at);
+                const diffHours = (sessionDate - requestDate) / 3600000;
+                h1Indicator = diffHours >= 24
+                    ? '<br><small style="color:green;">✅ H-1 terpenuhi</small>'
+                    : '<br><small style="color:red;">⚠️ Kurang dari H-1</small>';
+            }
+
+            let actionButtons = '';
+            if (r.status === 'pending') {
+                actionButtons = `
+                    <button onclick="openAdminModal(${r.id}, 'approve')" style="color:white; background:#4CAF50; border:none; padding:4px 10px; border-radius:4px; cursor:pointer; margin-bottom:4px;">✅ Approve</button><br>
+                    <button onclick="openAdminModal(${r.id}, 'reject')" style="color:white; background:#F44336; border:none; padding:4px 10px; border-radius:4px; cursor:pointer;">❌ Reject</button>
+                `;
+            } else {
+                actionButtons = `<small>${r.admin_notes || '—'}</small>`;
+            }
+
+            html += `<tr>
+                <td>${r.id}</td>
+                <td>${r.teacher_name}</td>
+                <td>Sesi #${r.class_session_id}<br><small>${r.class_name}</small></td>
+                <td>${currentSchedule}${h1Indicator}</td>
+                <td style="max-width:200px; word-wrap:break-word;">${r.reason}</td>
+                <td>${proofLink}</td>
+                <td>${newSchedule}</td>
+                <td>${statusBadge}</td>
+                <td>${requestedAt}</td>
+                <td>${actionButtons}</td>
+            </tr>`;
+        });
+        tbody.innerHTML = html;
+    } catch (e) {
+        document.getElementById('reschedule-requests-list').innerHTML = '<tr><td colspan="10">Gagal memuat data.</td></tr>';
+    }
+}
+
+function openAdminModal(requestId, action) {
+    document.getElementById('modal-request-id').value = requestId;
+    document.getElementById('modal-action').value = action;
+    document.getElementById('modal-admin-notes').value = '';
+    document.getElementById('modal-msg').textContent = '';
+
+    const title = document.getElementById('modal-title');
+    const btn = document.getElementById('modal-confirm-btn');
+
+    if (action === 'approve') {
+        title.textContent = '✅ Approve Reschedule Request #' + requestId;
+        btn.style.background = '#4CAF50';
+        btn.textContent = 'Approve';
+    } else {
+        title.textContent = '❌ Reject Reschedule Request #' + requestId;
+        btn.style.background = '#F44336';
+        btn.textContent = 'Reject';
+    }
+
+    document.getElementById('admin-notes-modal').style.display = 'block';
+}
+
+function closeModal() {
+    document.getElementById('admin-notes-modal').style.display = 'none';
+}
+
+async function confirmModalAction() {
+    const requestId = document.getElementById('modal-request-id').value;
+    const action = document.getElementById('modal-action').value;
+    const adminNotes = document.getElementById('modal-admin-notes').value;
+    const msg = document.getElementById('modal-msg');
+
+    msg.textContent = 'Memproses...';
+    msg.style.color = '#333';
+
+    try {
+        const res = await fetch(`/api/schedule-change-requests/${requestId}/${action}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ admin_notes: adminNotes })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            msg.textContent = 'Error: ' + (data.error || 'Gagal memproses.');
+            msg.style.color = 'red';
+            return;
+        }
+
+        msg.textContent = data.message;
+        msg.style.color = 'green';
+
+        setTimeout(() => {
+            closeModal();
+            loadRescheduleRequests();
+            loadSessions();
+        }, 800);
+    } catch (e) {
+        msg.textContent = 'Error: ' + e.message;
+        msg.style.color = 'red';
+    }
 }
 
 calcPeriod();

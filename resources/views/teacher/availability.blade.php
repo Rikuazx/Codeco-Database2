@@ -79,6 +79,56 @@
     <p id="cancel-msg" style="margin-top:6px;"></p>
 </div>
 
+<!-- ============ RESCHEDULE REQUEST SECTION (Minggu 2 Tentatif) ============ -->
+<h3>📅 Reschedule Jadwal (Minggu 2 — Tentatif)</h3>
+<p>Sesi pada Minggu 2 (tentatif) yang dapat di-reschedule (maksimal H-1 sebelum kelas):</p>
+
+<div id="reschedule-sessions-list">
+    <p>Pilih teacher untuk melihat sesi yang bisa di-reschedule.</p>
+</div>
+
+<div id="reschedule-form" style="display:none; margin-top:10px; padding:10px; border:1px solid #2196F3; border-radius:4px; background:#e3f2fd;">
+    <h4 style="margin:0 0 8px; color:#1565C0;">Form Reschedule</h4>
+    <input type="hidden" id="reschedule-session-id">
+    <label>Alasan reschedule (min 10 karakter):<br>
+        <textarea id="reschedule-reason" rows="3" style="width:100%; max-width:500px;" placeholder="Jelaskan alasan reschedule dengan detail..."></textarea>
+    </label><br>
+    <label>Bukti pendukung (PDF/PNG/JPG, max 2MB):<br>
+        <input type="file" id="reschedule-proof" accept=".pdf,.png,.jpg,.jpeg">
+    </label><br><br>
+    <label>Tanggal baru (opsional):<br>
+        <input type="date" id="reschedule-new-date">
+    </label><br>
+    <label>Waktu baru mulai (opsional):<br>
+        <input type="datetime-local" id="reschedule-new-start">
+    </label><br>
+    <label>Waktu baru selesai (opsional):<br>
+        <input type="datetime-local" id="reschedule-new-end">
+    </label><br><br>
+    <button onclick="submitReschedule()" style="color:white; background:#1565C0; font-weight:bold; border:none; padding:6px 16px; border-radius:4px; cursor:pointer;">Ajukan Reschedule</button>
+    <button onclick="closeRescheduleForm()" style="margin-left:4px;">Batal</button>
+    <p id="reschedule-msg" style="margin-top:6px;"></p>
+</div>
+
+<!-- Riwayat Reschedule Request -->
+<h4 style="margin-top:16px;">Riwayat Reschedule Request</h4>
+<table border="1" cellpadding="5" style="border-collapse:collapse; width:100%; max-width:900px;">
+    <thead>
+        <tr style="background:#e3f2fd;">
+            <th>Sesi</th>
+            <th>Alasan</th>
+            <th>Bukti</th>
+            <th>Tanggal/Waktu Baru</th>
+            <th>Status</th>
+            <th>Catatan Admin</th>
+            <th>Diajukan</th>
+        </tr>
+    </thead>
+    <tbody id="reschedule-history">
+        <tr><td colspan="7">Pilih teacher untuk melihat riwayat reschedule.</td></tr>
+    </tbody>
+</table>
+
 <!-- ============ RULES ============ -->
 <h3>
     <button onclick="toggleRules()" style="cursor:pointer; background:none; border:1px solid #ccc; padding:4px 10px; border-radius:4px;">
@@ -203,6 +253,8 @@ function onTeacherChange() {
         loadAvailability();
         loadCancellationStats();
         loadTeacherSessions();
+        loadRescheduleSessions();
+        loadRescheduleHistory();
     }
 }
 
@@ -509,6 +561,188 @@ async function submitCancellation() {
     closeCancelForm();
     loadTeacherSessions();
     loadCancellationStats();
+}
+
+// ============================================
+// RESCHEDULE (Minggu 2 Tentatif)
+// ============================================
+async function loadRescheduleSessions() {
+    const tid = currentTeacherId;
+    if (!tid) return;
+
+    try {
+        const res = await fetch(`/api/teachers/${tid}/sessions`);
+        const sessions = await res.json();
+
+        // Load teacher availability to check week 2 tentative
+        const availRes = await fetch(`/api/teacher-availability/${tid}`);
+        const availabilities = await availRes.json();
+
+        // Build a map of week 2 tentative dates
+        const tentativeDates = {};
+        availabilities.forEach(a => {
+            if (a.week_number === 2 && a.week_status === 'tentative') {
+                tentativeDates[a.date] = true;
+            }
+        });
+
+        const container = document.getElementById('reschedule-sessions-list');
+        const allSessions = sessions.data || sessions;
+
+        // Filter: scheduled, H-1, and in week 2 tentative
+        const eligible = allSessions.filter(s => {
+            if (s.status !== 'scheduled') return false;
+            const startTime = new Date(s.start_time);
+            if (startTime <= new Date(Date.now() + 86400000)) return false;
+            const sessionDate = startTime.toISOString().slice(0, 10);
+            return tentativeDates[sessionDate] === true;
+        });
+
+        if (eligible.length === 0) {
+            container.innerHTML = '<p>Tidak ada sesi Minggu 2 (Tentatif) yang bisa di-reschedule saat ini.</p>';
+            return;
+        }
+
+        let html = '<ul>';
+        eligible.forEach(s => {
+            const dt = new Date(s.start_time);
+            const dateStr = dt.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+            const timeStr = dt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+            html += `<li>
+                Sesi #${s.id} — ${dateStr}, ${timeStr}
+                <span style="color:orange; font-weight:bold;"> [TENTATIF]</span>
+                <button onclick="openRescheduleForm(${s.id})" style="color:#1565C0; font-weight:bold; margin-left:6px;">📅 Reschedule</button>
+            </li>`;
+        });
+        html += '</ul>';
+        container.innerHTML = html;
+    } catch (e) {
+        document.getElementById('reschedule-sessions-list').innerHTML = '<p>Gagal memuat sesi.</p>';
+    }
+}
+
+function openRescheduleForm(sessionId) {
+    document.getElementById('reschedule-session-id').value = sessionId;
+    document.getElementById('reschedule-reason').value = '';
+    document.getElementById('reschedule-proof').value = '';
+    document.getElementById('reschedule-new-date').value = '';
+    document.getElementById('reschedule-new-start').value = '';
+    document.getElementById('reschedule-new-end').value = '';
+    document.getElementById('reschedule-form').style.display = 'block';
+    document.getElementById('reschedule-msg').textContent = '';
+}
+
+function closeRescheduleForm() {
+    document.getElementById('reschedule-form').style.display = 'none';
+}
+
+async function submitReschedule() {
+    const tid       = currentTeacherId;
+    const sessionId = document.getElementById('reschedule-session-id').value;
+    const reason    = document.getElementById('reschedule-reason').value;
+    const proofFile = document.getElementById('reschedule-proof').files[0];
+    const newDate   = document.getElementById('reschedule-new-date').value;
+    const newStart  = document.getElementById('reschedule-new-start').value;
+    const newEnd    = document.getElementById('reschedule-new-end').value;
+    const msg       = document.getElementById('reschedule-msg');
+
+    if (!reason || reason.length < 10) {
+        msg.textContent = 'Alasan harus minimal 10 karakter.';
+        msg.style.color = 'red';
+        return;
+    }
+    if (!proofFile) {
+        msg.textContent = 'Bukti pendukung harus diunggah.';
+        msg.style.color = 'red';
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('teacher_id', tid);
+    formData.append('class_session_id', sessionId);
+    formData.append('reason', reason);
+    formData.append('proof_file', proofFile);
+    if (newDate) formData.append('new_date', newDate);
+    if (newStart) formData.append('new_start_time', newStart);
+    if (newEnd) formData.append('new_end_time', newEnd);
+
+    msg.textContent = 'Mengirim request reschedule...';
+    msg.style.color = '#333';
+
+    try {
+        const res = await fetch('/api/schedule-change-requests', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            msg.textContent = 'Error: ' + (data.error || data.message || 'Gagal mengirim request.');
+            msg.style.color = 'red';
+            return;
+        }
+
+        msg.textContent = data.message;
+        msg.style.color = 'green';
+
+        closeRescheduleForm();
+        loadRescheduleSessions();
+        loadRescheduleHistory();
+    } catch (e) {
+        msg.textContent = 'Error: ' + e.message;
+        msg.style.color = 'red';
+    }
+}
+
+async function loadRescheduleHistory() {
+    const tid = currentTeacherId;
+    if (!tid) return;
+
+    try {
+        const res = await fetch(`/api/schedule-change-requests?teacher_id=${tid}`);
+        const json = await res.json();
+        const requests = json.data || [];
+
+        const tbody = document.getElementById('reschedule-history');
+
+        if (requests.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7">Belum ada riwayat reschedule request.</td></tr>';
+            return;
+        }
+
+        let html = '';
+        requests.forEach(r => {
+            const statusBadge = r.status === 'pending'
+                ? '<span style="color:white; background:#FF9800; padding:2px 8px; border-radius:4px; font-size:0.85em;">⏳ Pending</span>'
+                : r.status === 'approved'
+                ? '<span style="color:white; background:#4CAF50; padding:2px 8px; border-radius:4px; font-size:0.85em;">✅ Approved</span>'
+                : '<span style="color:white; background:#F44336; padding:2px 8px; border-radius:4px; font-size:0.85em;">❌ Rejected</span>';
+
+            const proofLink = r.proof_file
+                ? `<a href="/storage/${r.proof_file}" target="_blank">📎 Lihat</a>`
+                : '—';
+
+            let newSchedule = '—';
+            if (r.new_date) newSchedule = r.new_date;
+            if (r.new_start_time) newSchedule += `<br>${r.new_start_time}`;
+            if (r.new_end_time) newSchedule += ` - ${r.new_end_time}`;
+
+            const requestedAt = r.requested_at ? new Date(r.requested_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+
+            html += `<tr>
+                <td>Sesi #${r.class_session_id}<br><small>${r.class_name}</small></td>
+                <td>${r.reason}</td>
+                <td>${proofLink}</td>
+                <td>${newSchedule}</td>
+                <td>${statusBadge}</td>
+                <td>${r.admin_notes || '—'}</td>
+                <td>${requestedAt}</td>
+            </tr>`;
+        });
+        tbody.innerHTML = html;
+    } catch (e) {
+        document.getElementById('reschedule-history').innerHTML = '<tr><td colspan="7">Gagal memuat riwayat.</td></tr>';
+    }
 }
 
 // ============================================

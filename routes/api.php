@@ -79,6 +79,7 @@ Route::put('/cancellation-logs/{id}/validate', [CancellationLogController::class
 Route::get('/teachers/{teacher_id}/sanction-status', [CancellationLogController::class, 'teacherSanctionStatus']);
 
 // Schedule Change Requests
+Route::get('/schedule-change-requests', [ScheduleChangeRequestController::class, 'index']);
 Route::post('/schedule-change-requests', [ScheduleChangeRequestController::class, 'store']);
 Route::post('/schedule-change-requests/{id}/approve', [ScheduleChangeRequestController::class, 'approve']);
 Route::post('/schedule-change-requests/{id}/reject', [ScheduleChangeRequestController::class, 'reject']);
