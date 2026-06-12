@@ -91,6 +91,22 @@ class feedbackController extends Controller
                 $salaryMessage = "Feedback submitted. Some student feedbacks are still pending for this session.";
             }
 
+            // 🧠 Auto-complete: jika semua feedback sudah terisi, otomatis set session jadi completed
+            if (count($enrolledStudentIds) > 0 && $allFeedbackSubmitted && $session->status !== 'completed') {
+                $session->update(['status' => 'completed']);
+
+                // 🧠 Auto-complete enrollment: jika SEMUA session di kelas sudah completed
+                $totalSessions = ClassSession::where('class_id', $session->class_id)->count();
+                $completedSessions = ClassSession::where('class_id', $session->class_id)
+                    ->where('status', 'completed')->count();
+
+                if ($totalSessions > 0 && $totalSessions === $completedSessions) {
+                    Enrollment::where('class_id', $session->class_id)
+                        ->whereIn('status', ['pending', 'active'])
+                        ->update(['status' => 'completed']);
+                }
+            }
+
             return $feedback;
         });
 
