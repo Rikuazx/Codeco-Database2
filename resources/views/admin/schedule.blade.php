@@ -42,6 +42,36 @@
 
 <ul id="sessions-list"></ul>
 
+<!-- ============ OPEN SESSIONS (TEACHER BOOKING) ============ -->
+<h3>📖 Open Sessions (untuk di-booking Teacher)</h3>
+<p>Buat session tanpa assign teacher. Teacher bisa melihat dan mem-booking session ini sendiri.</p>
+
+<select id="open-class">
+    <option value="">-- Pilih Kelas --</option>
+</select>
+<input type="datetime-local" id="open-start" placeholder="Start Time">
+<input type="datetime-local" id="open-end" placeholder="End Time">
+<button onclick="createOpenSession()">Buat Open Session</button>
+<span id="open-msg"></span>
+
+<h4>Daftar Open Sessions</h4>
+<table border="1" cellpadding="5" style="border-collapse:collapse; width:100%; max-width:1000px; margin-top:10px;">
+    <thead>
+        <tr style="background:#e8f5e9;">
+            <th>ID</th>
+            <th>Kelas</th>
+            <th>Jadwal</th>
+            <th>Status Booking</th>
+            <th>Teacher</th>
+            <th>Booked At</th>
+            <th>Aksi</th>
+        </tr>
+    </thead>
+    <tbody id="open-sessions-list">
+        <tr><td colspan="7">Klik "Load Schedule" untuk memuat data.</td></tr>
+    </tbody>
+</table>
+
 <!-- ============ RESCHEDULE REQUESTS ============ -->
 <h3>📋 Reschedule Requests (Minggu 2 — Tentatif)</h3>
 <p>Daftar request reschedule dari teacher. Hanya request yang diajukan maks H-1 sebelum kelas yang valid.</p>
@@ -115,12 +145,15 @@ function calcPeriod() {
     document.getElementById('period-info').textContent = `${periodStart} s/d ${periodEnd}`;
 }
 
+let allOpenSessions = [];
+
 async function loadAllData() {
     await Promise.all([
         loadTeachers(),
         loadClasses(),
         loadAvailabilities(),
         loadSessions(),
+        loadOpenSessions(),
         loadRescheduleRequests(),
     ]);
     renderAvailabilityList();
@@ -146,10 +179,19 @@ async function loadTeachers() {
 async function loadClasses() {
     const res = await fetch('/api/classes');
     allClasses = await res.json();
+
+    // Populate sched-class
     const sel = document.getElementById('sched-class');
     sel.innerHTML = '<option value="">-- Pilih Kelas --</option>';
     allClasses.forEach(c => {
         sel.innerHTML += `<option value="${c.id}">${c.name} (${c.total_sessions} sesi)</option>`;
+    });
+
+    // Populate open-class
+    const openSel = document.getElementById('open-class');
+    openSel.innerHTML = '<option value="">-- Pilih Kelas --</option>';
+    allClasses.forEach(c => {
+        openSel.innerHTML += `<option value="${c.id}">${c.name}</option>`;
     });
 }
 
@@ -307,9 +349,16 @@ function renderSessionsList() {
             ?? (s.teacher ? `Teacher #${s.teacher.id}` : 'None');
         const className = s.class?.name ?? `Class #${s.class_id}`;
 
+        let bookingBadge = '';
+        if (s.is_open_for_booking) {
+            bookingBadge = s.teacher_id
+                ? ' <span style="color:white; background:#4CAF50; padding:2px 6px; border-radius:4px; font-size:0.8em;">✅ Booked</span>'
+                : ' <span style="color:white; background:#FF9800; padding:2px 6px; border-radius:4px; font-size:0.8em;">📖 Open</span>';
+        }
+
         html += `
         <li>
-            Session ${s.id} | ${className} | Teacher: ${teacherName} | ${s.start_time} - ${s.end_time} | ${s.status}
+            Session ${s.id} | ${className} | Teacher: ${teacherName} | ${s.start_time} - ${s.end_time} | ${s.status}${bookingBadge}
             ${!s.teacher_id ? `<button onclick="autoAssign(${s.id})">Auto Assign</button>` : ''}
             <button onclick="deleteSessionAdmin(${s.id})">Delete</button>
         </li>`;
@@ -333,6 +382,7 @@ async function deleteSessionAdmin(sessionId) {
     if (!confirm('Yakin ingin menghapus session ini?')) return;
     await fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' });
     loadSessions();
+    loadOpenSessions();
 }
 
 // ============================================
@@ -481,6 +531,98 @@ async function confirmModalAction() {
         msg.textContent = 'Error: ' + e.message;
         msg.style.color = 'red';
     }
+}
+
+// ============================================
+// OPEN SESSIONS MANAGEMENT (TEACHER BOOKING)
+// ============================================
+async function createOpenSession() {
+    const msg     = document.getElementById('open-msg');
+    const classId = document.getElementById('open-class').value;
+    const start   = document.getElementById('open-start').value;
+    const end     = document.getElementById('open-end').value;
+
+    if (!classId || !start || !end) {
+        msg.textContent = 'Semua field harus diisi.';
+        msg.style.color = 'red';
+        return;
+    }
+
+    msg.textContent = 'Menyimpan...';
+    msg.style.color = '#333';
+
+    try {
+        const res = await fetch('/api/sessions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                class_id: classId,
+                start_time: start,
+                end_time: end,
+                status: 'scheduled',
+                is_open_for_booking: true,
+            })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            msg.textContent = 'Error: ' + (data.error || data.message || 'Gagal.');
+            msg.style.color = 'red';
+            return;
+        }
+
+        msg.textContent = 'Open session berhasil dibuat!';
+        msg.style.color = 'green';
+        loadOpenSessions();
+        loadSessions();
+    } catch (e) {
+        msg.textContent = 'Error: ' + e.message;
+        msg.style.color = 'red';
+    }
+}
+
+async function loadOpenSessions() {
+    try {
+        const res = await fetch('/api/sessions/open');
+        const json = await res.json();
+        allOpenSessions = json.data || [];
+        renderOpenSessionsList();
+    } catch (e) {
+        document.getElementById('open-sessions-list').innerHTML = '<tr><td colspan="7">Gagal memuat data.</td></tr>';
+    }
+}
+
+function renderOpenSessionsList() {
+    const tbody = document.getElementById('open-sessions-list');
+
+    if (allOpenSessions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7">Belum ada open session.</td></tr>';
+        return;
+    }
+
+    let html = '';
+    allOpenSessions.forEach(s => {
+        const startFmt = s.start_time ? s.start_time.substring(0, 16).replace('T', ' ') : '—';
+        const endFmt   = s.end_time   ? s.end_time.substring(0, 16).replace('T', ' ')   : '—';
+        const bookedAt = s.booked_at  ? new Date(s.booked_at).toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
+
+        const statusBadge = s.is_booked
+            ? '<span style="color:white; background:#4CAF50; padding:2px 8px; border-radius:4px; font-size:0.85em;">✅ Booked</span>'
+            : '<span style="color:white; background:#FF9800; padding:2px 8px; border-radius:4px; font-size:0.85em;">📖 Available</span>';
+
+        const teacherInfo = s.is_booked ? (s.booked_by_name || s.teacher_name || '—') : '—';
+
+        html += `<tr>
+            <td>${s.id}</td>
+            <td>${s.class_name}</td>
+            <td>${startFmt}<br>s/d ${endFmt}</td>
+            <td>${statusBadge}</td>
+            <td>${teacherInfo}</td>
+            <td>${bookedAt}</td>
+            <td><button onclick="deleteSessionAdmin(${s.id})" style="color:white; background:#F44336; border:none; padding:4px 10px; border-radius:4px; cursor:pointer;">🗑 Delete</button></td>
+        </tr>`;
+    });
+    tbody.innerHTML = html;
 }
 
 calcPeriod();

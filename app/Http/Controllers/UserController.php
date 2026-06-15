@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Student;
 use App\Models\Teacher;
+use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -22,12 +23,15 @@ class UserController extends Controller
         DB::beginTransaction();
 
         try {
-            //  Create user
+            // 🧠 Lookup role_id from RBAC roles table
+            $role = Role::where('slug', $request->role)->first();
+
+            //  Create user with role_id (no more legacy role string)
             $user = User::create([
                 'name' => $request->name,
                 'email' => $request->email,
                 'password' => bcrypt($request->password),
-                'role' => $request->role ?? 'student',
+                'role_id' => $role ? $role->id : null,
             ]);
 
             //  Auto create student
@@ -53,7 +57,7 @@ class UserController extends Controller
 
             return response()->json([
                 'message' => 'User created successfully',
-                'data' => $user
+                'data' => $user->load('role')
             ]);
 
         } catch (\Exception $e) {
@@ -69,13 +73,22 @@ class UserController extends Controller
     {
         $user = User::findOrFail($id);
 
-        $user->update([
+        $updateData = [
             'name' => $request->name,
             'email' => $request->email,
-            'role' => $request->role,
-        ]);
+        ];
 
-        return response()->json(['message' => 'Updated']);
+        // 🧠 Support both role slug and role_id
+        if ($request->has('role') && !$request->has('role_id')) {
+            $role = Role::where('slug', $request->role)->first();
+            $updateData['role_id'] = $role ? $role->id : $user->role_id;
+        } elseif ($request->has('role_id')) {
+            $updateData['role_id'] = $request->role_id;
+        }
+
+        $user->update($updateData);
+
+        return response()->json(['message' => 'Updated', 'data' => $user->load('role')]);
     }
 
     public function destroy($id)
@@ -87,7 +100,7 @@ class UserController extends Controller
 
     public function index()
     {
-        $users = User::with(['student', 'teacher'])->get();
+        $users = User::with(['student', 'teacher', 'role'])->get();
 
         return response()->json($users);
     }

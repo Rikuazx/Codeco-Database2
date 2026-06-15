@@ -17,6 +17,7 @@
 <select id="role">
     <option value="student">Student</option>
     <option value="teacher">Teacher</option>
+    <option value="admin">Admin</option>
 </select>
 
 <button onclick="saveUser()">Save</button>
@@ -31,9 +32,10 @@ async function loadUsers() {
 
     let html = '';
     data.forEach(u => {
+        const roleName = u.role ? u.role.name : 'No Role';
         html += `
         <li>
-            ${u.name} (${u.role})
+            ${u.name} (${roleName})
             <button onclick="editUser(${u.id})">Edit</button>
             <button onclick="deleteUser(${u.id})">Delete</button>
         </li>`;
@@ -49,7 +51,7 @@ function editUser(id) {
     document.getElementById('user_id').value = u.id;
     document.getElementById('name').value = u.name;
     document.getElementById('email').value = u.email;
-    document.getElementById('role').value = u.role;
+    document.getElementById('role').value = u.role ? u.role.slug : 'student';
     document.getElementById('password').value = '';
 }
 

@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use App\Models\Feedback;
 use App\Models\Teacher;
 use App\Models\Enrollment;
+use App\Models\TeacherAvailability;
 class ClassSessionController extends Controller
 {
     /**
@@ -22,6 +23,7 @@ class ClassSessionController extends Controller
             'start_time' => 'required|date',
             'end_time'   => 'required|date|after:start_time',
             'status'     => 'nullable|in:scheduled,completed,cancelled',
+            'is_open_for_booking' => 'nullable|boolean',
         ]);
 
         $session = ClassSession::create([
@@ -30,6 +32,7 @@ class ClassSessionController extends Controller
             'start_time' => $request->start_time,
             'end_time'   => $request->end_time,
             'status'     => $request->status ?? 'scheduled',
+            'is_open_for_booking' => $request->boolean('is_open_for_booking', false),
         ]);
 
         return response()->json([
@@ -126,6 +129,140 @@ public function complete($id)
         ], 500);
     }
 }
+
+    // ============================================
+    // TEACHER BOOKING FLOW
+    // ============================================
+
+    /**
+     * GET /api/sessions/open
+     * List all open sessions available for teacher booking.
+     */
+    public function openSessions()
+    {
+        $sessions = ClassSession::with(['class', 'teacher.user', 'bookedByTeacher.user'])
+            ->where('is_open_for_booking', true)
+            ->where('start_time', '>', now()) // hanya session yang belum lewat
+            ->orderBy('start_time', 'asc')
+            ->get()
+            ->map(function ($s) {
+                return [
+                    'id'              => $s->id,
+                    'class_id'        => $s->class_id,
+                    'class_name'      => $s->class->name ?? "Class #{$s->class_id}",
+                    'class_desc'      => $s->class->description ?? '',
+                    'teacher_id'      => $s->teacher_id,
+                    'teacher_name'    => $s->teacher?->user?->name ?? null,
+                    'start_time'      => $s->start_time,
+                    'end_time'        => $s->end_time,
+                    'status'          => $s->status,
+                    'is_booked'       => $s->teacher_id !== null,
+                    'booked_at'       => $s->booked_at,
+                    'booked_by_name'  => $s->bookedByTeacher?->user?->name ?? null,
+                ];
+            });
+
+        return response()->json(['data' => $sessions]);
+    }
+
+    /**
+     * POST /api/sessions/{id}/book
+     * Teacher books an open session.
+     */
+    public function bookSession(Request $request, $id)
+    {
+        $request->validate([
+            'teacher_id' => 'required|exists:teachers,id',
+        ]);
+
+        $session = ClassSession::findOrFail($id);
+        $teacherId = $request->teacher_id;
+
+        // 🧠 Validasi: session harus open dan belum di-book
+        if (!$session->is_open_for_booking) {
+            return response()->json([
+                'error' => 'Session ini tidak terbuka untuk booking.'
+            ], 400);
+        }
+
+        if ($session->teacher_id !== null) {
+            return response()->json([
+                'error' => 'Session ini sudah di-booking oleh teacher lain.'
+            ], 409);
+        }
+
+
+
+        // 🧠 Validasi: cek conflict dengan session lain milik teacher
+        $sessionDate = Carbon::parse($session->start_time)->toDateString();
+        $conflict = ClassSession::where('teacher_id', $teacherId)
+            ->where('id', '!=', $id)
+            ->where(function ($q) use ($session) {
+                $q->where('start_time', '<', $session->end_time)
+                  ->where('end_time', '>', $session->start_time);
+            })
+            ->exists();
+
+        if ($conflict) {
+            return response()->json([
+                'error' => 'Kamu sudah punya jadwal sesi lain di waktu yang sama. Tidak bisa booking.'
+            ], 409);
+        }
+
+
+        // ✅ Booking berhasil
+        $session->update([
+            'teacher_id'          => $teacherId,
+            'booked_at'           => now(),
+            'booked_by_teacher_id' => $teacherId,
+        ]);
+
+        return response()->json([
+            'message' => 'Booking berhasil! Session telah di-assign ke kamu.',
+            'data'    => $session->load('teacher.user', 'class'),
+        ]);
+    }
+
+    /**
+     * POST /api/sessions/{id}/unbook
+     * Teacher cancels their booking on an open session.
+     */
+    public function unbookSession(Request $request, $id)
+    {
+        $request->validate([
+            'teacher_id' => 'required|exists:teachers,id',
+        ]);
+
+        $session = ClassSession::findOrFail($id);
+        $teacherId = $request->teacher_id;
+
+        // 🧠 Validasi: session harus di-book oleh teacher ini
+        if (!$session->is_open_for_booking) {
+            return response()->json([
+                'error' => 'Session ini bukan open session.'
+            ], 400);
+        }
+
+        if ((int)$session->teacher_id !== (int)$teacherId) {
+            return response()->json([
+                'error' => 'Kamu tidak bisa membatalkan booking session yang bukan milikmu.'
+            ], 403);
+        }
+
+
+
+        // ✅ Unbook
+        $session->update([
+            'teacher_id'          => null,
+            'booked_at'           => null,
+            'booked_by_teacher_id' => null,
+        ]);
+
+        return response()->json([
+            'message' => 'Booking berhasil dibatalkan. Session kembali terbuka untuk booking.',
+            'data'    => $session->load('class'),
+        ]);
+    }
 
 public function autoAssignTeacher($id)
 {

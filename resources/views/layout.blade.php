@@ -28,6 +28,7 @@
         <span class="step">[Teacher]</span>
         <a href="/teacher/my-classes">My Classes</a> |
         <a href="/teacher/availability">Availability</a> |
+        <a href="/teacher/booking">Booking</a> |
         <a href="/teacher/feedback">Feedback</a> |
         <a href="/teacher/salary">Salary</a> |
         <a href="/teacher/kpi">KPI</a>

@@ -45,10 +45,13 @@ Route::get('/classes', [ClassController::class, 'index']);
 Route::get('/classes/{id}', [ClassController::class, 'show']);
 
 // Class Sessions
+Route::get('/sessions/open', [ClassSessionController::class, 'openSessions']); // must be before {id} routes
 Route::post('/sessions', [ClassSessionController::class, 'store']);
 Route::post('/generate-sessions/{class_id}', [ClassSessionController::class, 'generateSessions']);
 Route::post('/sessions/{id}/complete', [ClassSessionController::class, 'complete']);
 Route::post('/sessions/{id}/auto-assign', [ClassSessionController::class, 'autoAssignTeacher']);
+Route::post('/sessions/{id}/book', [ClassSessionController::class, 'bookSession']);
+Route::post('/sessions/{id}/unbook', [ClassSessionController::class, 'unbookSession']);
 Route::put('/sessions/{id}', [ClassSessionController::class, 'update']);
 Route::post('/assign-teacher', [ClassSessionController::class, 'assignTeacher']);
 Route::get('/sessions', [ClassSessionController::class, 'index']);

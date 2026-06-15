@@ -13,6 +13,13 @@ class ClassSession extends Model
         'end_time',
         'status',
         'is_salary_paid',
+        'is_open_for_booking',
+        'booked_at',
+        'booked_by_teacher_id',
+    ];
+
+    protected $casts = [
+        'is_open_for_booking' => 'boolean',
     ];
 
     // 🔗 Relationships
@@ -24,6 +31,11 @@ class ClassSession extends Model
     public function teacher()
     {
         return $this->belongsTo(Teacher::class);
+    }
+
+    public function bookedByTeacher()
+    {
+        return $this->belongsTo(Teacher::class, 'booked_by_teacher_id');
     }
 
     public function feedback()
