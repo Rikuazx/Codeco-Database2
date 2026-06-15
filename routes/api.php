@@ -27,10 +27,13 @@ Route::get('/users', [UserController::class, 'index']);
 Route::post('/teachers', [TeacherController::class, 'store']);
 Route::get('/teachers', [TeacherController::class, 'index']);
 
-// Teacher Requests (Student → Teacher)
+// Teacher Requests (Student → Teacher → Admin)
 Route::post('/teacher-requests', [TeacherRequestController::class, 'store']);
 Route::get('/teacher-requests', [TeacherRequestController::class, 'index']);
+Route::get('/teacher-requests/teacher/{teacher_id}', [TeacherRequestController::class, 'byTeacher']);
 Route::put('/teacher-requests/{id}/respond', [TeacherRequestController::class, 'respond']);
+Route::put('/teacher-requests/{id}/teacher-respond', [TeacherRequestController::class, 'teacherRespond']);
+Route::put('/teacher-requests/{id}/admin-action', [TeacherRequestController::class, 'adminAction']);
 
 // Students
 Route::put('/students/{id}', [StudentController::class, 'update']);

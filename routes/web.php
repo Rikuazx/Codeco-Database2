@@ -38,6 +38,7 @@ Route::middleware(['rbac:submit_availability'])->prefix('teacher')->group(functi
     Route::get('/my-classes',   function () { return view('teacher.my-classes'); });
     Route::get('/availability', function () { return view('teacher.availability'); });
     Route::get('/booking',      function () { return view('teacher.booking'); });
+    Route::get('/requests',     function () { return view('teacher.requests'); });
     Route::get('/feedback',     function () { return view('teacher.feedback'); });
     Route::get('/salary',       function () { return view('teacher.salary'); });
     Route::get('/kpi',          function () { return view('teacher.kpi'); });

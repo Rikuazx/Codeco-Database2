@@ -72,6 +72,64 @@
     </tbody>
 </table>
 
+<!-- ============ REJECTED TEACHER REQUESTS ============ -->
+<h3>📬 Request Student — Ditolak Teacher</h3>
+<p>Request dari student yang ditolak oleh teacher. Admin bisa: assign teacher lain, buat open session, atau reject.</p>
+
+<table border="1" cellpadding="5" style="border-collapse:collapse; width:100%; max-width:1200px; margin-top:10px;">
+    <thead>
+        <tr style="background:#fce4ec;">
+            <th>ID</th>
+            <th>Student</th>
+            <th>Teacher Asal</th>
+            <th>Pesan</th>
+            <th>Preferensi</th>
+            <th>Catatan Teacher</th>
+            <th>Status</th>
+            <th>Aksi Admin</th>
+        </tr>
+    </thead>
+    <tbody id="rejected-requests-list">
+        <tr><td colspan="8">Klik "Load Schedule" untuk memuat data.</td></tr>
+    </tbody>
+</table>
+
+<!-- Admin Action Modal -->
+<div id="admin-action-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); z-index:999;">
+    <div style="background:white; max-width:550px; margin:80px auto; padding:20px; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+        <h4 id="aa-title" style="margin:0 0 12px;">Admin Action</h4>
+        <input type="hidden" id="aa-request-id">
+        <input type="hidden" id="aa-action-type">
+
+        <div id="aa-assign-fields" style="display:none;">
+            <label>Teacher Baru:<br>
+                <select id="aa-teacher" style="width:100%;"></select>
+            </label><br><br>
+            <label>Kelas:<br>
+                <select id="aa-class" style="width:100%;"></select>
+            </label><br><br>
+            <label>Start Time: <input type="datetime-local" id="aa-start" style="width:100%;"></label><br><br>
+            <label>End Time: <input type="datetime-local" id="aa-end" style="width:100%;"></label><br><br>
+        </div>
+
+        <div id="aa-open-fields" style="display:none;">
+            <label>Kelas:<br>
+                <select id="aa-open-class" style="width:100%;"></select>
+            </label><br><br>
+            <label>Start Time: <input type="datetime-local" id="aa-open-start" style="width:100%;"></label><br><br>
+            <label>End Time: <input type="datetime-local" id="aa-open-end" style="width:100%;"></label><br><br>
+        </div>
+
+        <label>Catatan Admin (opsional):<br>
+            <textarea id="aa-notes" rows="2" style="width:100%;"></textarea>
+        </label><br><br>
+
+        <button id="aa-confirm-btn" onclick="confirmAdminAction()" style="font-weight:bold; padding:6px 16px; border:none; border-radius:4px; color:white; cursor:pointer;">Konfirmasi</button>
+        <button onclick="closeAdminActionModal()" style="margin-left:4px;">Batal</button>
+        <p id="aa-msg" style="margin-top:6px;"></p>
+    </div>
+</div>
+
 <!-- ============ RESCHEDULE REQUESTS ============ -->
 <h3>📋 Reschedule Requests (Minggu 2 — Tentatif)</h3>
 <p>Daftar request reschedule dari teacher. Hanya request yang diajukan maks H-1 sebelum kelas yang valid.</p>
@@ -155,6 +213,7 @@ async function loadAllData() {
         loadSessions(),
         loadOpenSessions(),
         loadRescheduleRequests(),
+        loadRejectedRequests(),
     ]);
     renderAvailabilityList();
 }
@@ -623,6 +682,175 @@ function renderOpenSessionsList() {
         </tr>`;
     });
     tbody.innerHTML = html;
+}
+
+// ============================================
+// REJECTED TEACHER REQUESTS (ADMIN ACTIONS)
+// ============================================
+let rejectedRequests = [];
+
+async function loadRejectedRequests() {
+    try {
+        const res = await fetch('/api/teacher-requests?teacher_response=rejected&status=pending');
+        const json = await res.json();
+        rejectedRequests = json.data || [];
+        renderRejectedRequests();
+    } catch (e) {
+        document.getElementById('rejected-requests-list').innerHTML = '<tr><td colspan="8">Gagal memuat data.</td></tr>';
+    }
+}
+
+function renderRejectedRequests() {
+    const tbody = document.getElementById('rejected-requests-list');
+
+    if (rejectedRequests.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8">Tidak ada request yang perlu ditangani.</td></tr>';
+        return;
+    }
+
+    let html = '';
+    rejectedRequests.forEach(r => {
+        const studentName = r.student?.user?.name ?? `Student #${r.student_id}`;
+        const teacherName = r.teacher?.user?.name ?? `Teacher #${r.teacher_id}`;
+        const pref = r.preferred_date
+            ? `${r.preferred_date}${r.preferred_start_time ? '<br>' + r.preferred_start_time + ' - ' + r.preferred_end_time : ''}`
+            : '—';
+
+        html += `<tr>
+            <td>${r.id}</td>
+            <td>${studentName}</td>
+            <td>${teacherName}</td>
+            <td style="max-width:150px; word-wrap:break-word;">${r.message || '—'}</td>
+            <td>${pref}</td>
+            <td>${r.teacher_notes || '—'}</td>
+            <td><span style="color:white; background:#F44336; padding:2px 8px; border-radius:4px; font-size:0.85em;">❌ Ditolak Teacher</span></td>
+            <td>
+                <button onclick="openAdminActionModal(${r.id}, 'assign_other')" style="color:white; background:#2196F3; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; margin-bottom:4px; font-size:0.85em;">👤 Assign Lain</button><br>
+                <button onclick="openAdminActionModal(${r.id}, 'create_open')" style="color:white; background:#FF9800; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; margin-bottom:4px; font-size:0.85em;">📖 Open Session</button><br>
+                <button onclick="openAdminActionModal(${r.id}, 'reject')" style="color:white; background:#F44336; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:0.85em;">❌ Reject</button>
+            </td>
+        </tr>`;
+    });
+    tbody.innerHTML = html;
+}
+
+function openAdminActionModal(requestId, actionType) {
+    document.getElementById('aa-request-id').value = requestId;
+    document.getElementById('aa-action-type').value = actionType;
+    document.getElementById('aa-notes').value = '';
+    document.getElementById('aa-msg').textContent = '';
+
+    const title = document.getElementById('aa-title');
+    const btn = document.getElementById('aa-confirm-btn');
+    const assignFields = document.getElementById('aa-assign-fields');
+    const openFields = document.getElementById('aa-open-fields');
+
+    assignFields.style.display = 'none';
+    openFields.style.display = 'none';
+
+    // Populate teacher & class dropdowns
+    const aaSel = document.getElementById('aa-teacher');
+    aaSel.innerHTML = '<option value="">-- Pilih Teacher --</option>';
+    allTeachers.forEach(t => {
+        const name = t.user ? t.user.name : `Teacher #${t.id}`;
+        aaSel.innerHTML += `<option value="${t.id}">${name}</option>`;
+    });
+
+    const aaClass = document.getElementById('aa-class');
+    aaClass.innerHTML = '<option value="">-- Pilih Kelas --</option>';
+    const aaOpenClass = document.getElementById('aa-open-class');
+    aaOpenClass.innerHTML = '<option value="">-- Pilih Kelas --</option>';
+    allClasses.forEach(c => {
+        aaClass.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+        aaOpenClass.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+    });
+
+    // Pre-fill times from request preference
+    const req = rejectedRequests.find(r => r.id === requestId);
+    if (req && req.preferred_date) {
+        const startVal = `${req.preferred_date}T${req.preferred_start_time || '09:00'}`;
+        const endVal = `${req.preferred_date}T${req.preferred_end_time || '11:00'}`;
+        document.getElementById('aa-start').value = startVal;
+        document.getElementById('aa-end').value = endVal;
+        document.getElementById('aa-open-start').value = startVal;
+        document.getElementById('aa-open-end').value = endVal;
+    }
+
+    if (actionType === 'assign_other') {
+        title.textContent = '👤 Assign Teacher Lain — Request #' + requestId;
+        btn.style.background = '#2196F3';
+        btn.textContent = 'Assign';
+        assignFields.style.display = 'block';
+    } else if (actionType === 'create_open') {
+        title.textContent = '📖 Buat Open Session — Request #' + requestId;
+        btn.style.background = '#FF9800';
+        btn.textContent = 'Buat Open Session';
+        openFields.style.display = 'block';
+    } else {
+        title.textContent = '❌ Reject Request #' + requestId;
+        btn.style.background = '#F44336';
+        btn.textContent = 'Reject';
+    }
+
+    document.getElementById('admin-action-modal').style.display = 'block';
+}
+
+function closeAdminActionModal() {
+    document.getElementById('admin-action-modal').style.display = 'none';
+}
+
+async function confirmAdminAction() {
+    const requestId = document.getElementById('aa-request-id').value;
+    const actionType = document.getElementById('aa-action-type').value;
+    const notes = document.getElementById('aa-notes').value;
+    const msg = document.getElementById('aa-msg');
+
+    msg.textContent = 'Memproses...';
+    msg.style.color = '#333';
+
+    const payload = { action: actionType, admin_notes: notes };
+
+    if (actionType === 'assign_other') {
+        payload.teacher_id = document.getElementById('aa-teacher').value;
+        payload.class_id = document.getElementById('aa-class').value;
+        payload.start_time = document.getElementById('aa-start').value;
+        payload.end_time = document.getElementById('aa-end').value;
+        if (!payload.teacher_id || !payload.class_id || !payload.start_time || !payload.end_time) {
+            msg.textContent = 'Semua field harus diisi.'; msg.style.color = 'red'; return;
+        }
+    } else if (actionType === 'create_open') {
+        payload.class_id = document.getElementById('aa-open-class').value;
+        payload.start_time = document.getElementById('aa-open-start').value;
+        payload.end_time = document.getElementById('aa-open-end').value;
+        if (!payload.class_id || !payload.start_time || !payload.end_time) {
+            msg.textContent = 'Semua field harus diisi.'; msg.style.color = 'red'; return;
+        }
+    }
+
+    try {
+        const res = await fetch(`/api/teacher-requests/${requestId}/admin-action`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            msg.textContent = 'Error: ' + (data.error || 'Gagal.'); msg.style.color = 'red'; return;
+        }
+
+        msg.textContent = data.message;
+        msg.style.color = 'green';
+
+        setTimeout(() => {
+            closeAdminActionModal();
+            loadRejectedRequests();
+            loadSessions();
+            loadOpenSessions();
+        }, 800);
+    } catch (e) {
+        msg.textContent = 'Error: ' + e.message; msg.style.color = 'red';
+    }
 }
 
 calcPeriod();
