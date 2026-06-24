@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EnrollmentController;
 use App\Http\Controllers\ClassSessionController;
 use App\Http\Controllers\AttendanceController;
@@ -17,102 +18,112 @@ use App\Http\Controllers\TeacherRequestController;
 use App\Http\Controllers\CancellationLogController;
 use App\Http\Controllers\TeacherKpiController;
 
-// Users
-Route::put('/users/{id}', [UserController::class, 'update']);
-Route::delete('/users/{id}', [UserController::class, 'destroy']);
-Route::post('/users', [UserController::class, 'store']);
-Route::get('/users', [UserController::class, 'index']);
+// ============================================================
+// 🔓 Public Auth Routes (no token required)
+// ============================================================
+Route::post('/login', [AuthController::class, 'login']);
 
-// Teachers
-Route::post('/teachers', [TeacherController::class, 'store']);
-Route::get('/teachers', [TeacherController::class, 'index']);
+// ============================================================
+// 🔒 Protected Routes (require Sanctum token)
+// ============================================================
+Route::middleware('auth:sanctum')->group(function () {
 
-// Teacher Requests (Student → Teacher → Admin)
-Route::post('/teacher-requests', [TeacherRequestController::class, 'store']);
-Route::get('/teacher-requests', [TeacherRequestController::class, 'index']);
-Route::get('/teacher-requests/teacher/{teacher_id}', [TeacherRequestController::class, 'byTeacher']);
-Route::put('/teacher-requests/{id}/respond', [TeacherRequestController::class, 'respond']);
-Route::put('/teacher-requests/{id}/teacher-respond', [TeacherRequestController::class, 'teacherRespond']);
-Route::put('/teacher-requests/{id}/admin-action', [TeacherRequestController::class, 'adminAction']);
+    // Auth
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/me', [AuthController::class, 'me']);
 
-// Students
-Route::put('/students/{id}', [StudentController::class, 'update']);
-Route::post('/students', [StudentController::class, 'store']);
-Route::get('/students', [StudentController::class, 'index']);
+    // Users
+    Route::put('/users/{id}', [UserController::class, 'update']);
+    Route::delete('/users/{id}', [UserController::class, 'destroy']);
+    Route::post('/users', [UserController::class, 'store']);
+    Route::get('/users', [UserController::class, 'index']);
 
-// Classes
-Route::put('/classes/{id}', [ClassController::class, 'update']);
-Route::delete('/classes/{id}', [ClassController::class, 'destroy']);
-Route::post('/classes', [ClassController::class, 'store']);
-Route::get('/classes', [ClassController::class, 'index']);
-Route::get('/classes/{id}', [ClassController::class, 'show']);
+    // Teachers
+    Route::post('/teachers', [TeacherController::class, 'store']);
+    Route::get('/teachers', [TeacherController::class, 'index']);
 
-// Class Sessions
-Route::get('/sessions/open', [ClassSessionController::class, 'openSessions']); // must be before {id} routes
-Route::post('/sessions', [ClassSessionController::class, 'store']);
-Route::post('/generate-sessions/{class_id}', [ClassSessionController::class, 'generateSessions']);
-Route::post('/sessions/{id}/complete', [ClassSessionController::class, 'complete']);
-Route::post('/sessions/{id}/auto-assign', [ClassSessionController::class, 'autoAssignTeacher']);
-Route::post('/sessions/{id}/book', [ClassSessionController::class, 'bookSession']);
-Route::post('/sessions/{id}/unbook', [ClassSessionController::class, 'unbookSession']);
-Route::put('/sessions/{id}', [ClassSessionController::class, 'update']);
-Route::post('/assign-teacher', [ClassSessionController::class, 'assignTeacher']);
-Route::get('/sessions', [ClassSessionController::class, 'index']);
-Route::get('/teachers/{teacher_id}/sessions', [ClassSessionController::class, 'byTeacher']);
-Route::delete('/sessions/{id}', [ClassSessionController::class, 'destroy']);
+    // Teacher Requests (Student → Teacher → Admin)
+    Route::post('/teacher-requests', [TeacherRequestController::class, 'store']);
+    Route::get('/teacher-requests', [TeacherRequestController::class, 'index']);
+    Route::get('/teacher-requests/teacher/{teacher_id}', [TeacherRequestController::class, 'byTeacher']);
+    Route::put('/teacher-requests/{id}/respond', [TeacherRequestController::class, 'respond']);
+    Route::put('/teacher-requests/{id}/teacher-respond', [TeacherRequestController::class, 'teacherRespond']);
+    Route::put('/teacher-requests/{id}/admin-action', [TeacherRequestController::class, 'adminAction']);
 
-// Enrollments
-Route::get('/enrollments', [EnrollmentController::class, 'index']);
-Route::post('/enroll', [EnrollmentController::class, 'store']);
-Route::get('/students/{student_id}/enrollments', [EnrollmentController::class, 'byStudent']);
-Route::delete('/enrollments/{id}', [EnrollmentController::class, 'destroy']);
+    // Students
+    Route::put('/students/{id}', [StudentController::class, 'update']);
+    Route::post('/students', [StudentController::class, 'store']);
+    Route::get('/students', [StudentController::class, 'index']);
 
-// Attendance
-Route::post('/attendance', [AttendanceController::class, 'markAttendance']);
+    // Classes
+    Route::put('/classes/{id}', [ClassController::class, 'update']);
+    Route::delete('/classes/{id}', [ClassController::class, 'destroy']);
+    Route::post('/classes', [ClassController::class, 'store']);
+    Route::get('/classes', [ClassController::class, 'index']);
+    Route::get('/classes/{id}', [ClassController::class, 'show']);
 
-// Teacher Availability
-Route::post('/teacher-availability', [TeacherAvailabilityController::class, 'store']);
-Route::get('/teacher-availability', [TeacherAvailabilityController::class, 'all']);
-Route::get('/teacher-availability/{teacher_id}', [TeacherAvailabilityController::class, 'show']);
-Route::post('/teacher-availability/lock-week', [TeacherAvailabilityController::class, 'lockWeekOne']);
-Route::post('/teacher-availability/promote-week', [TeacherAvailabilityController::class, 'promoteWeekTwo']);
-Route::get('/teachers/{teacher_id}/cancellation-stats', [TeacherAvailabilityController::class, 'cancellationStats']);
+    // Class Sessions
+    Route::get('/sessions/open', [ClassSessionController::class, 'openSessions']);
+    Route::post('/sessions', [ClassSessionController::class, 'store']);
+    Route::post('/generate-sessions/{class_id}', [ClassSessionController::class, 'generateSessions']);
+    Route::post('/sessions/{id}/complete', [ClassSessionController::class, 'complete']);
+    Route::post('/sessions/{id}/auto-assign', [ClassSessionController::class, 'autoAssignTeacher']);
+    Route::post('/sessions/{id}/book', [ClassSessionController::class, 'bookSession']);
+    Route::post('/sessions/{id}/unbook', [ClassSessionController::class, 'unbookSession']);
+    Route::put('/sessions/{id}', [ClassSessionController::class, 'update']);
+    Route::post('/assign-teacher', [ClassSessionController::class, 'assignTeacher']);
+    Route::get('/sessions', [ClassSessionController::class, 'index']);
+    Route::get('/teachers/{teacher_id}/sessions', [ClassSessionController::class, 'byTeacher']);
+    Route::delete('/sessions/{id}', [ClassSessionController::class, 'destroy']);
 
-// Cancellation Logs
-Route::post('/cancellation-logs', [CancellationLogController::class, 'store']);
-Route::get('/cancellation-logs', [CancellationLogController::class, 'index']);
-Route::put('/cancellation-logs/{id}/validate', [CancellationLogController::class, 'validateCancellation']);
-Route::get('/teachers/{teacher_id}/sanction-status', [CancellationLogController::class, 'teacherSanctionStatus']);
+    // Enrollments
+    Route::get('/enrollments', [EnrollmentController::class, 'index']);
+    Route::post('/enroll', [EnrollmentController::class, 'store']);
+    Route::get('/students/{student_id}/enrollments', [EnrollmentController::class, 'byStudent']);
+    Route::delete('/enrollments/{id}', [EnrollmentController::class, 'destroy']);
 
-// Schedule Change Requests
-Route::get('/schedule-change-requests', [ScheduleChangeRequestController::class, 'index']);
-Route::post('/schedule-change-requests', [ScheduleChangeRequestController::class, 'store']);
-Route::post('/schedule-change-requests/{id}/approve', [ScheduleChangeRequestController::class, 'approve']);
-Route::post('/schedule-change-requests/{id}/reject', [ScheduleChangeRequestController::class, 'reject']);
+    // Attendance
+    Route::post('/attendance', [AttendanceController::class, 'markAttendance']);
 
-// Feedback
-Route::post('/feedback', [FeedbackController::class, 'store']);
-Route::get('/feedback', [FeedbackController::class, 'index']);
-Route::get('/teachers/{teacher_id}/feedback', [FeedbackController::class, 'byTeacher']);
-Route::get('/students/{student_id}/feedback', [FeedbackController::class, 'byStudent']);
-Route::get('/sessions/{session_id}/enrolled-students', [FeedbackController::class, 'enrolledStudents']);
-Route::get('/teachers/{teacher_id}/salary', [FeedbackController::class, 'salaryHistory']);
+    // Teacher Availability
+    Route::post('/teacher-availability', [TeacherAvailabilityController::class, 'store']);
+    Route::get('/teacher-availability', [TeacherAvailabilityController::class, 'all']);
+    Route::get('/teacher-availability/{teacher_id}', [TeacherAvailabilityController::class, 'show']);
+    Route::post('/teacher-availability/lock-week', [TeacherAvailabilityController::class, 'lockWeekOne']);
+    Route::post('/teacher-availability/promote-week', [TeacherAvailabilityController::class, 'promoteWeekTwo']);
+    Route::get('/teachers/{teacher_id}/cancellation-stats', [TeacherAvailabilityController::class, 'cancellationStats']);
 
-// Certificates
-Route::get('/certificates', [CertificateController::class, 'index']);
-Route::post('/certificates', [CertificateController::class, 'store']);
-Route::get('/certificates/{id}', [CertificateController::class, 'show']);
-Route::get('/certificates/{id}/download', [CertificateController::class, 'download']);
-Route::get('/test-certificate', [CertificateController::class, 'test']);
-Route::get('/students/{student_id}/certificates', [CertificateController::class, 'byStudent']);
+    // Cancellation Logs
+    Route::post('/cancellation-logs', [CancellationLogController::class, 'store']);
+    Route::get('/cancellation-logs', [CancellationLogController::class, 'index']);
+    Route::put('/cancellation-logs/{id}/validate', [CancellationLogController::class, 'validateCancellation']);
+    Route::get('/teachers/{teacher_id}/sanction-status', [CancellationLogController::class, 'teacherSanctionStatus']);
 
-// KPI
-Route::post('/kpi/calculate/{teacher_id}', [TeacherKpiController::class, 'calculate']);
-Route::post('/kpi/calculate-all', [TeacherKpiController::class, 'calculateAll']);
-Route::get('/kpi', [TeacherKpiController::class, 'index']);
-Route::get('/kpi/{teacher_id}', [TeacherKpiController::class, 'show']);
+    // Schedule Change Requests
+    Route::get('/schedule-change-requests', [ScheduleChangeRequestController::class, 'index']);
+    Route::post('/schedule-change-requests', [ScheduleChangeRequestController::class, 'store']);
+    Route::post('/schedule-change-requests/{id}/approve', [ScheduleChangeRequestController::class, 'approve']);
+    Route::post('/schedule-change-requests/{id}/reject', [ScheduleChangeRequestController::class, 'reject']);
 
-// Auth
-Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:sanctum');
+    // Feedback
+    Route::post('/feedback', [FeedbackController::class, 'store']);
+    Route::get('/feedback', [FeedbackController::class, 'index']);
+    Route::get('/teachers/{teacher_id}/feedback', [FeedbackController::class, 'byTeacher']);
+    Route::get('/students/{student_id}/feedback', [FeedbackController::class, 'byStudent']);
+    Route::get('/sessions/{session_id}/enrolled-students', [FeedbackController::class, 'enrolledStudents']);
+    Route::get('/teachers/{teacher_id}/salary', [FeedbackController::class, 'salaryHistory']);
+
+    // Certificates
+    Route::get('/certificates', [CertificateController::class, 'index']);
+    Route::post('/certificates', [CertificateController::class, 'store']);
+    Route::get('/certificates/{id}', [CertificateController::class, 'show']);
+    Route::get('/certificates/{id}/download', [CertificateController::class, 'download']);
+    Route::get('/test-certificate', [CertificateController::class, 'test']);
+    Route::get('/students/{student_id}/certificates', [CertificateController::class, 'byStudent']);
+
+    // KPI
+    Route::post('/kpi/calculate/{teacher_id}', [TeacherKpiController::class, 'calculate']);
+    Route::post('/kpi/calculate-all', [TeacherKpiController::class, 'calculateAll']);
+    Route::get('/kpi', [TeacherKpiController::class, 'index']);
+    Route::get('/kpi/{teacher_id}', [TeacherKpiController::class, 'show']);
+});

@@ -17,29 +17,31 @@ class RbacMiddleware
      */
     public function handle(Request $request, Closure $next, string $permissionSlug): Response
     {
-        // 🧠 1. Get active role from simulated session or authenticated user
-        $roleSlug = session('simulated_role');
+        // 🧠 1. Prioritize authenticated user (Sanctum or session-based)
+        $roleSlug = null;
 
-        if (!$roleSlug && auth()->check()) {
+        if (auth()->check()) {
             $user = auth()->user();
-            if ($user->relationLoaded('role') && $user->role) {
-                $roleSlug = $user->role->slug;
-            } else {
-                $roleSlug = $user->role ? $user->role->slug : $user->role;
-            }
+            $user->loadMissing('role');
+            $roleSlug = $user->role ? $user->role->slug : null;
         }
 
-        // Default to student if not logged in
+        // 🧠 2. Fallback to simulated session role (for development/backward compatibility)
+        if (!$roleSlug) {
+            $roleSlug = session('simulated_role');
+        }
+
+        // 🧠 3. No role found — deny access
         if (!$roleSlug) {
             if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json([
-                    'error' => 'Access Denied: Please simulate login first.'
+                    'error' => 'Unauthenticated. Please login first.'
                 ], 401);
             }
-            return redirect('/')->with('error', 'Please simulate login first.');
+            return redirect('/login')->with('error', 'Please login first.');
         }
 
-        // 🧠 2. Fetch the Role with its Permissions
+        // 🧠 4. Fetch the Role with its Permissions
         $role = Role::with('permissions')->where('slug', $roleSlug)->first();
 
         if (!$role) {
@@ -51,7 +53,7 @@ class RbacMiddleware
             return redirect('/')->with('error', 'Access Denied: Role not found.');
         }
 
-        // 🧠 3. Check if role has the requested permission
+        // 🧠 5. Check if role has the requested permission
         $hasPermission = $role->permissions->contains('slug', $permissionSlug);
 
         if (!$hasPermission) {
